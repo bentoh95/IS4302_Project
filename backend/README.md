@@ -24,4 +24,6 @@ The Government API is the endpoint which our blockchain system should use to ret
 
 ## Setting Up 
 Please go to backend root folder, create a new file called ".env". Inside, add a "RESET_DB = true" or "RESET_DB = false" as needed. 
-In addition, add the needed pdf inside data folder as well. 
+<br/>In addition, add the needed pdf inside data folder as well. 
+<br/> type "npm install" on the backend folder to install necessary packages
+<br/> type "npm start" to start backend localhost
