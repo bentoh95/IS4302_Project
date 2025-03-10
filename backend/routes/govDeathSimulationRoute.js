@@ -13,4 +13,11 @@ router.get(
   govDeathSimulationController.getDeathCertURL
 );
 
+router.get(
+  "/confirmDeath/:deceasedNRIC",
+  govDeathSimulationController.confirmDeath
+);
+
+router.get("/getAllDeathToday", govDeathSimulationController.getAllDeathToday);
+
 module.exports = router;

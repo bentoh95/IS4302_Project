@@ -29,4 +29,33 @@ const getDeathCertURL = async (req, res) => {
   }
 };
 
-module.exports = { getDeathCertURL };
+const confirmDeath = async (req, res) => {
+  try {
+    const { deceasedNRIC } = req.params;
+    if (await govDeathSimulationService.confirmDeath(deceasedNRIC)) {
+      return res.status(200).json({
+        result:
+          "Here is a confirmation that the deceased with NRIC number " +
+          deceasedNRIC +
+          " has died",
+      });
+    }
+  } catch (error) {
+    console.log(error.message);
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+const getAllDeathToday = async (req, res) => {
+  try {
+    const result = await govDeathSimulationService.getAllDeathToday();
+    if (result) {
+      return res.status(200).json({ result: result });
+    }
+  } catch (error) {
+    console.log(error.message);
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+module.exports = { getDeathCertURL, confirmDeath, getAllDeathToday };
