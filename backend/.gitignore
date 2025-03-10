@@ -1,2 +1,3 @@
 utils/cron.log
 firebase/serviceAccountKey.json
+*.pdf
