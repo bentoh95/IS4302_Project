@@ -1,0 +1,11 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "1. Navigate into /utils     ``` cd utils ``` 2. Give permission ```chmod +x add_cron.sh ``` 3. Run add_cron.sh ```./add_cron.sh```",
+  "main": "index.js",
+  "scripts": {
+    "start": "node firebase/index.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
