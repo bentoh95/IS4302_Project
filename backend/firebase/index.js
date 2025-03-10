@@ -1,15 +1,35 @@
+require("dotenv").config();
+
 const govDeathSimulationRoutes = require("../routes/govDeathSimulationRoute.js");
 const express = require("express");
 const http = require("http");
 const bodyParser = require("body-parser");
 //const cors = require("cors");
 const db = require("./firebaseAdmin.js"); // Correctly import the Firestore instance
-const app = express();
+const op = require("./firestoreOperations.js");
+
+const truthy = ["TRUE", "true", "True", "1"];
+
 /*app.use(
   cors({
     credentials: true,
   })
 );*/
+
+async function database() {
+  if (truthy.includes(process.env.RESET_DB || "")) {
+    await op.clearDatabase();
+    console.log("Database resetted!!");
+    await op.createDatabase();
+    console.log("Database recreated!");
+  } else {
+    console.log("Database left untouched!");
+  }
+}
+
+database();
+
+const app = express();
 
 app.use(bodyParser.json());
 //app.use("/img", express.static("img"));
