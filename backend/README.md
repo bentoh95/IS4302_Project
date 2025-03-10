@@ -18,3 +18,6 @@ If successful, cron.log file appears within a minute and success message appears
 Useful commands: 
 <br /> ```crontab -l```: check curr running cronjobs
 <br /> ```crontab -e```: edit cronjobs manually
+
+## Government API
+The Government API is the endpoint which our blockchain system should use to retrieve the death certificate as long as authorized credentials are provided. 
