@@ -21,3 +21,7 @@ Useful commands:
 
 ## Government API
 The Government API is the endpoint which our blockchain system should use to retrieve the death certificate as long as authorized credentials are provided. 
+
+## Setting Up 
+Please go to backend root folder, create a new file called ".env". Inside, add a "RESET_DB = true" or "RESET_DB = false" as needed. 
+In addition, add the needed pdf inside data folder as well. 
