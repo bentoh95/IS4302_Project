@@ -1,0 +1,34 @@
+name: Fetch Firebase Data Daily
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  
+  workflow_dispatch:  
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+            node-version: 18
+            cache: 'npm'
+            cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Create Firebase Credentials File
+        run: echo '${{ secrets.FIREBASE_CREDENTIALS }}' > backend/firebase/serviceAccountKey.json
+
+      - name: Run Firebase data fetch script
+        working-directory: backend
+        run: node scripts/fetchData.js
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: serviceAccountKey.json

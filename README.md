@@ -32,3 +32,14 @@ open new terminal window and enter ``npx hardhat run scripts/deploy.js --network
     ├── scripts/                   # Deployment and contract interaction scripts
     ├── test/                      # Unit tests for smart contracts
 ```
+
+##### Testing github workflow locally
+This is an example to test github cron job, you can run this job manually.
+Install `act` with `brew install act` before attempting
+Run the following in the root repository
+```
+act workflow_dispatch \
+    -s FIREBASE_CREDENTIALS="$(cat backend/firebase/serviceAccountKey.json)" \
+    -j fetch-data
+
+```
