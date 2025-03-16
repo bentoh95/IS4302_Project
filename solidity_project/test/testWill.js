@@ -5,11 +5,11 @@ const { ethers } = require("hardhat");
 describe("Will", function() {
     let Will;
     let will;
-    let owner, beneficiary1, beneficiary2, others;
+    let owner, beneficiary1, beneficiary2, editor1, editor2, nonOwner, others;
 
     // Deploy Will
     beforeEach(async function() {
-        [owner, beneficiary1, beneficiary2, ...others] = await ethers.getSigners();
+        [owner, beneficiary1, beneficiary2, editor1, editor2, nonOwner, ...others] = await ethers.getSigners();
 
         Will = await ethers.getContractFactory("Will");
         will = await Will.connect(owner).deploy();
@@ -76,5 +76,45 @@ describe("Will", function() {
         console.log(willString);          
         // Check if the returned string matches the expected string exactly
         expect(willString).to.equal(expectedWill);
+    });
+
+    it("Should add an editor successfully", async function () {
+        await will.createWill(owner.address);
+        await will.addEditor(owner.address, editor1.address);
+        const editorExists = await will.isAuthorisedEditorExist(owner.address, editor1.address);
+        expect(editorExists).to.equal(true);
+    });
+
+    it("Should remove an editor successfully", async function () {
+        await will.createWill(owner.address);
+        await will.addEditor(owner.address, editor1.address);
+        await will.removeEditor(owner.address, editor1.address);
+        const editorExists = await will.isAuthorisedEditorExist(owner.address, editor1.address);
+        expect(editorExists).to.equal(false);
+    });
+
+    it("Should revert if adding the same editor twice", async function () {
+        await will.createWill(owner.address);
+        await will.addEditor(owner.address, editor1.address);
+        await expect(will.addEditor(owner.address, editor1.address)).to.be.revertedWith("Editor already exists");
+    });
+
+    it("Should revert if trying to remove an editor who does not exist", async function () {
+        await will.createWill(owner.address);
+        await expect(will.removeEditor(owner.address, editor1.address)).to.be.revertedWith("Editor not found");
+    });
+      
+    it("Should revert if a non-owner tries to remove an editor", async function () {
+        await will.createWill(owner.address);
+        await will.addEditor(owner.address, editor1.address);
+        await expect(will.connect(nonOwner).removeEditor(owner.address, editor1.address)).to.be.revertedWith("Not the owner");
+    });
+
+    it("should revert if adding invalid editor address", async function () {
+        await will.createWill(owner.address);
+        const zeroAddress = ethers.ZeroAddress;
+        await expect(
+            will.addEditor(owner.address, zeroAddress)
+        ).to.be.revertedWith("Invalid editor address");
     });
 });
