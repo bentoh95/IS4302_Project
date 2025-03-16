@@ -5,11 +5,11 @@ const { ethers } = require("hardhat");
 describe("Will", function() {
     let Will;
     let will;
-    let owner, beneficiary1, beneficiary2, others;
+    let owner, beneficiary1, beneficiary2, editor1, editor2, others;
 
     // Deploy Will
     beforeEach(async function() {
-        [owner, beneficiary1, beneficiary2, ...others] = await ethers.getSigners();
+        [owner, beneficiary1, beneficiary2, editor1, editor2, ...others] = await ethers.getSigners();
 
         Will = await ethers.getContractFactory("Will");
         will = await Will.connect(owner).deploy();
@@ -76,5 +76,11 @@ describe("Will", function() {
         console.log(willString);          
         // Check if the returned string matches the expected string exactly
         expect(willString).to.equal(expectedWill);
+    });
+
+    it("should add an editor successfully", async function () {
+        await will.addEditor(owner.address, editor1.address);
+        const isEditor = await will.authorizedEditors[owner.adress][editor1.address];
+        expect(isEditor).to.equal(true);
     });
 });
