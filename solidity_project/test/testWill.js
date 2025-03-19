@@ -5,17 +5,15 @@ const { ethers } = require("hardhat");
 describe("Will", function() {
     let Will;
     let will;
-    let owner, beneficiary1, beneficiary2, editor1, editor2, nonOwner, others;
+    let owner, beneficiary1, beneficiary2, editor1, editor2, viewer1, viewer2, nonOwner, others;
 
     // Deploy Will
     beforeEach(async function() {
-        [owner, beneficiary1, beneficiary2, editor1, editor2, nonOwner, ...others] = await ethers.getSigners();
+        [owner, beneficiary1, beneficiary2, editor1, editor2, viewer1, viewer2, nonOwner, ...others] = await ethers.getSigners();
 
         Will = await ethers.getContractFactory("Will");
         will = await Will.connect(owner).deploy();
         await will.waitForDeployment();
-
-    
     });
 
     it("Should create a will successfully", async function () {
@@ -116,5 +114,51 @@ describe("Will", function() {
         await expect(
             will.addEditor(owner.address, zeroAddress)
         ).to.be.revertedWith("Invalid editor address");
+    });
+
+    it("Should add a viewer successfully", async function () {
+        await will.createWill(owner.address);
+        await will.addViewer(owner.address, viewer1.address);
+        const viewerExists = await will.isAuthorisedViewer(owner.address, viewer1.address);
+        expect(viewerExists).to.equal(true);
+    });
+
+    it("Should remove a viewer successfully", async function () {
+        await will.createWill(owner.address);
+        await will.addViewer(owner.address, viewer1.address);
+        await will.removeViewer(owner.address, viewer1.address);
+        const viewerExists = await will.isAuthorisedViewer(owner.address, viewer1.address);
+        expect(viewerExists).to.equal(false);
+    });
+
+    it("Should revert if adding the same viewer twice", async function () {
+        await will.createWill(owner.address);
+        await will.addViewer(owner.address, viewer1.address);
+        await expect(will.addViewer(owner.address, viewer1.address)).to.be.revertedWith("Viewer already exists");
+    });
+
+    it("Should revert if trying to remove an viewer who does not exist", async function () {
+        await will.createWill(owner.address);
+        await expect(will.removeViewer(owner.address, viewer1.address)).to.be.revertedWith("Viewer not found");
+    });
+
+    it("Should allow the viewer with permission to call WillViewForBeneficiaries if will is InCreation (owner check)", async function () {
+        await will.createWill(owner.address);
+        await will.addViewer(owner.address, viewer1.address);
+        await will.addBeneficiary(owner.address, beneficiary1.address, 100);
+        await will.addBeneficiary(owner.address, beneficiary2.address, 50);
+
+        const viewerExists = await will.isAuthorisedViewer(owner.address, viewer1.address);
+        expect(viewerExists).to.equal(true);
+
+        const result = await will.connect(viewer1).WillViewForBeneficiaries(owner.address);
+        expect(result).to.include("Beneficiaries & Allocations:");
+    });
+  
+    it("Should not allow the viewer without permission to call WillViewForBeneficiaries if will is InCreation (owner check)", async function () {
+        await will.createWill(owner.address);
+        await expect(
+            will.connect(viewer2).WillViewForBeneficiaries(owner.address)
+        ).to.be.revertedWith("Not authorized to view this will (InCreation)");
     });
 });
