@@ -14,14 +14,20 @@ contract Will {
     mapping(address => WillData) private wills;
     mapping(address => mapping(address => uint256)) private beneficiaryAlloc;
     mapping(address => mapping(address => bool)) private authorizedEditors; //willOwner address to editor address to F/T
+    mapping(address => mapping(address => bool)) private authorizedViewers; // mapping of who has the permission to view will
 
     
     event WillCreated(address indexed owner);
     event BeneficiaryAdded(address indexed owner, address beneficiary, uint256 allocation);
     event BeneficiaryRemoved(address indexed owner, address beneficiary);
     event AllocationUpdated(address indexed owner, address beneficiary, uint256 allocation);
-    event WillViewed(address indexed owner);
+
     
+    /* 
+    -------------------
+        PERMISSIONS
+    -------------------
+    */
     modifier onlyOwner(address owner) {
         require(wills[owner].owner == msg.sender, "Not the owner");
         _;
@@ -34,7 +40,49 @@ contract Will {
         );
         _;
     } 
+        
+    modifier onlyViewPermitted(address owner) {
+        WillData storage userWill = wills[owner];
+        require(userWill.owner != address(0), "Will does not exist");
+
+        // Before death scenario
+        if (userWill.state == WillState.InCreation) {
+            // Only the owner or an explicitly authorizedViewer can view
+            require(
+                msg.sender == userWill.owner || authorizedViewers[owner][msg.sender],
+                "Not authorized to view this will (InCreation)"
+            );
+        } 
+        // After death scenario
+        else { 
+            // EITHER an explicitly authorizedViewer, OR a real beneficiary with nonzero allocation
+            bool isBeneficiary = false;
+            address[] memory beneficiaries = userWill.beneficiaries;
+
+            for (uint256 i = 0; i < beneficiaries.length; i++) {
+                if (
+                    beneficiaries[i] == msg.sender && 
+                    beneficiaryAlloc[owner][msg.sender] > 0
+                ) {
+                    isBeneficiary = true;
+                    break;
+                }
+            }
+            require(
+                authorizedViewers[owner][msg.sender] || isBeneficiary,
+                "You are not authorized or a beneficiary of this will"
+            );
+        }
+        _;
+    }
+
     
+    /* 
+    --------------------------
+        WILL FUNCTIONALITIES
+    --------------------------
+    */
+
     function createWill(address owner) public {
         require(msg.sender != address(0), "Invalid sender address");
         require(wills[owner].owner == address(0), "Will already exists");
@@ -120,14 +168,35 @@ contract Will {
         return willString;
     }
 
-    // Helper function to get substring
-    function substring(string memory str, uint startIndex, uint endIndex) private pure returns (string memory) {
-        bytes memory strBytes = bytes(str);
-        bytes memory result = new bytes(endIndex - startIndex);
-        for(uint i = startIndex; i < endIndex; i++) {
-            result[i - startIndex] = strBytes[i];
+    // Copied same viewWill function to another function for more customisability 
+    function WillViewForBeneficiaries(address owner) public view onlyViewPermitted(owner) returns (string memory) {
+
+        WillData storage userWill = wills[owner];
+        string memory willString = "Beneficiaries & Allocations:\n";
+        uint256 numBeneficiaries = userWill.beneficiaries.length;
+
+        for (uint256 i = 0; i < numBeneficiaries; i++) {
+            address beneficiary = userWill.beneficiaries[i];
+            uint256 allocation = beneficiaryAlloc[owner][beneficiary];
+            
+            string memory beneficiaryString = Strings.toHexString(uint256(uint160(beneficiary)), 20);
+            beneficiaryString = substring(beneficiaryString, 2, bytes(beneficiaryString).length); 
+
+            string memory allocationString = Strings.toString(allocation);
+
+            willString = string(
+                abi.encodePacked(
+                    willString,
+                    "- ",
+                    beneficiaryString,
+                    " -> ",
+                    allocationString,
+                    "\n"
+                )
+            );
         }
-        return string(result);
+
+        return willString;
     }
 
     function addEditor(address owner, address editor) public onlyOwner(owner) {
@@ -139,6 +208,17 @@ contract Will {
     function removeEditor(address owner, address editor) public onlyOwner(owner) {
         require(authorizedEditors[owner][editor], "Editor not found");
         authorizedEditors[owner][editor] = false;
+    } 
+
+    function addViewer(address owner, address viewer) public onlyOwner(owner) {
+        require(viewer != address(0), "Invalid viewer address");
+        require(!authorizedViewers[owner][viewer], "Viewer already exists");
+        authorizedViewers[owner][viewer] = true;
+    }
+
+    function removeViewer(address owner, address viewer) public onlyOwner(owner) {
+        require(authorizedViewers[owner][viewer], "Viewer not found");
+        authorizedViewers[owner][viewer] = false;
     } 
 
     function getWillData(address owner) public view returns (WillData memory) {
@@ -158,4 +238,26 @@ contract Will {
         require(wills[owner].owner != address(0), "Will does not exist");
         return authorizedEditors[owner][editor];
     }
+
+    function isAuthorisedViewer(address owner, address viewer) public view returns (bool check) {
+        require(wills[owner].owner != address(0), "Will does not exist");
+        return authorizedViewers[owner][viewer];
+    }
+
+    /* 
+    --------------------------
+        UTILS
+    --------------------------
+    */
+
+    // Helper function to get substring
+    function substring(string memory str, uint startIndex, uint endIndex) private pure returns (string memory) {
+        bytes memory strBytes = bytes(str);
+        bytes memory result = new bytes(endIndex - startIndex);
+        for(uint i = startIndex; i < endIndex; i++) {
+            result[i - startIndex] = strBytes[i];
+        }
+        return string(result);
+    }
+
 }
