@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+const EthereumEventProcessor = require("ethereum-event-processor");
+const Web3 = require("web3");
+const fs = require("fs");
 const govDeathSimulationRoutes = require("../routes/govDeathSimulationRoute.js");
 const express = require("express");
 const http = require("http");
@@ -7,6 +10,9 @@ const bodyParser = require("body-parser");
 //const cors = require("cors");
 const db = require("./firebaseAdmin.js"); // Correctly import the Firestore instance
 const op = require("./firestoreOperations.js");
+const { ethers } = require("ethers");
+const { WebSocketProvider } = require("@ethersproject/providers");
+const path = require("path");
 
 const truthy = ["TRUE", "true", "True", "1"];
 
@@ -60,6 +66,54 @@ app.get("/test-firebase", async (req, res) => {
   }
 });
 
+console.log(process.env.CONTRACT_ABI_PATH);
+
+const web3ProviderUrl = process.env.PROVIDER_WEBSOCKET_URL;
+const contractAddress = process.env.CONTRACT_ADDRESS;
+
+const contractABIPath = path.resolve(
+  __dirname,
+  "../../solidity_project/artifacts/contracts/Will.sol/Will.json"
+);
+console.log(contractABIPath);
+const contractJSON = JSON.parse(fs.readFileSync(contractABIPath, "utf-8"));
+const contractABI = contractJSON.abi;
+console.log(contractABI); // Log to ensure it's correctly loaded
+
+const eventOptions = {
+  pollingInterval: parseInt(process.env.EVENT_POOL_INTERVAL),
+  startBlock: 0,
+  blocksToWait: parseInt(process.env.EVENT_BLOCKS_TO_WAIT),
+  blocksToRead: parseInt(process.env.EVENT_BLOCKS_TO_READ),
+};
+
+const web3 = new Web3(new Web3.providers.WebsocketProvider(web3ProviderUrl));
+
+async function startEventListener() {
+  const latestBlock = await web3.eth.getBlock("latest");
+  eventOptions.startBlock = latestBlock.number;
+
+  const eventListener = new EthereumEventProcessor(
+    web3,
+    contractAddress,
+    contractABI,
+    eventOptions
+  );
+
+  eventListener.on("Test", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Event Return Values: ", event.returnValues);
+  });
+
+  eventListener.listen();
+
+  console.log("Event listener started");
+}
+
+// Call the async function
+startEventListener();
+
+// triggerEvent();
 // Set up HTTP server
 const server = http.createServer(app);
 server.listen(3000, () => {

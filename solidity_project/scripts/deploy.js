@@ -1,24 +1,31 @@
-const hre = require("hardhat");
+const { ethers } = require("hardhat");
 
 async function main() {
-  // dice contract deployment reference
-//   const Dice = await hre.ethers.getContractFactory("Dice");
-//   const dice = await Dice.deploy();
-//   await dice.waitForDeployment();
-//   console.log("Dice deployed to: ", await dice.getAddress());
+  // Get the contract factory
+  const [deployer] = await ethers.getSigners();
+  console.log("Deploying contracts with the account:", deployer.address);
 
-//   const DiceMarket = await hre.ethers.getContractFactory("DiceMarket");
-//   const diceMarket = await DiceMarket.deploy(
-//     await dice.getAddress(),
-//     "100000000000000000000000"
-//   );
-//   await diceMarket.waitForDeployment();
-//   console.log("DiceMarket deployed to:", await diceMarket.getAddress());
+  Will = await ethers.getContractFactory("Will");
+  will = await Will.connect(deployer).deploy();
+  await will.waitForDeployment();
 
-//   const DiceBattle = await hre.ethers.getContractFactory("DiceBattle");
-//   const diceBattle = await DiceBattle.deploy(await dice.getAddress()); 
-//   await diceBattle.waitForDeployment();
-//   console.log("DiceBattle deployed to:", await diceBattle.getAddress());
+  const tx = await will.emitTestEvent();
+  const receipt = await tx.wait();
+
+  // Log the full receipt
+  console.log("Full receipt:", receipt);
+
+  // Log just the logs array
+  console.log("Event logs:", receipt.logs);
+
+  // Try to decode the first log event
+  if (receipt.logs && receipt.logs.length > 0) {
+    const event = will.interface.parseLog(receipt.logs[0]);
+    console.log("Decoded event:", {
+      name: event.name,
+      args: event.args,
+    });
+  }
 }
 
 main()

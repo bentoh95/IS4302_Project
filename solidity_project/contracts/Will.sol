@@ -3,26 +3,38 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract Will {
-    enum WillState {InCreation, InExecution, Closed}
-    
+    enum WillState {
+        InCreation,
+        InExecution,
+        Closed
+    }
+
+    event Test(string message);
+
     struct WillData {
         address owner;
         address[] beneficiaries;
-        WillState state;  
+        WillState state;
     }
-    
+
     mapping(address => WillData) private wills;
     mapping(address => mapping(address => uint256)) private beneficiaryAlloc;
     mapping(address => mapping(address => bool)) private authorizedEditors; //willOwner address to editor address to F/T
     mapping(address => mapping(address => bool)) private authorizedViewers; // mapping of who has the permission to view will
 
-    
     event WillCreated(address indexed owner);
-    event BeneficiaryAdded(address indexed owner, address beneficiary, uint256 allocation);
+    event BeneficiaryAdded(
+        address indexed owner,
+        address beneficiary,
+        uint256 allocation
+    );
     event BeneficiaryRemoved(address indexed owner, address beneficiary);
-    event AllocationUpdated(address indexed owner, address beneficiary, uint256 allocation);
+    event AllocationUpdated(
+        address indexed owner,
+        address beneficiary,
+        uint256 allocation
+    );
 
-    
     /* 
     -------------------
         PERMISSIONS
@@ -33,14 +45,15 @@ contract Will {
         _;
     }
 
-    modifier onlyAuthorizedEditors (address owner) {
+    modifier onlyAuthorizedEditors(address owner) {
         require(
-            wills[owner].owner == msg.sender || authorizedEditors[owner][msg.sender],
+            wills[owner].owner == msg.sender ||
+                authorizedEditors[owner][msg.sender],
             "Not authorized"
         );
         _;
-    } 
-        
+    }
+
     modifier onlyViewPermitted(address owner) {
         WillData storage userWill = wills[owner];
         require(userWill.owner != address(0), "Will does not exist");
@@ -49,19 +62,20 @@ contract Will {
         if (userWill.state == WillState.InCreation) {
             // Only the owner or an explicitly authorizedViewer can view
             require(
-                msg.sender == userWill.owner || authorizedViewers[owner][msg.sender],
+                msg.sender == userWill.owner ||
+                    authorizedViewers[owner][msg.sender],
                 "Not authorized to view this will (InCreation)"
             );
-        } 
+        }
         // After death scenario
-        else { 
+        else {
             // EITHER an explicitly authorizedViewer, OR a real beneficiary with nonzero allocation
             bool isBeneficiary = false;
             address[] memory beneficiaries = userWill.beneficiaries;
 
             for (uint256 i = 0; i < beneficiaries.length; i++) {
                 if (
-                    beneficiaries[i] == msg.sender && 
+                    beneficiaries[i] == msg.sender &&
                     beneficiaryAlloc[owner][msg.sender] > 0
                 ) {
                     isBeneficiary = true;
@@ -76,101 +90,145 @@ contract Will {
         _;
     }
 
-    
     /* 
     --------------------------
         WILL FUNCTIONALITIES
     --------------------------
     */
 
+    function emitTestEvent() public {
+        emit Test("Hello, Test event!");
+    }
+
     function createWill(address owner) public {
         require(msg.sender != address(0), "Invalid sender address");
         require(wills[owner].owner == address(0), "Will already exists");
-        
+
         // Initialize empty array with proper syntax
         address[] memory emptyArray = new address[](0);
-        
+
         wills[owner] = WillData({
             owner: owner,
             beneficiaries: emptyArray,
             state: WillState.InCreation
         });
-        
+
         emit WillCreated(owner);
     }
-    
-    function addBeneficiary(address owner, address beneficiary, uint256 allocation) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
+
+    function addBeneficiary(
+        address owner,
+        address beneficiary,
+        uint256 allocation
+    ) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
         require(allocation > 0, "Need to allocate more than 0");
-        require(beneficiaryAlloc[owner][beneficiary] == 0, "Allocation already exists");
-        
+        require(
+            beneficiaryAlloc[owner][beneficiary] == 0,
+            "Allocation already exists"
+        );
+
         beneficiaryAlloc[owner][beneficiary] = allocation;
         wills[owner].beneficiaries.push(beneficiary);
-        
+
         emit BeneficiaryAdded(owner, beneficiary, allocation);
     }
-    
-    function removeBeneficiary(address owner, address beneficiary) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
-        require(beneficiaryAlloc[owner][beneficiary] != 0, "Allocation does not exist");
-        
+
+    function removeBeneficiary(
+        address owner,
+        address beneficiary
+    ) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
+        require(
+            beneficiaryAlloc[owner][beneficiary] != 0,
+            "Allocation does not exist"
+        );
+
         delete beneficiaryAlloc[owner][beneficiary];
-        
+
         // Remove from the beneficiaries array
         uint256 len = wills[owner].beneficiaries.length;
         for (uint256 i = 0; i < len; i++) {
             if (wills[owner].beneficiaries[i] == beneficiary) {
-                wills[owner].beneficiaries[i] = wills[owner].beneficiaries[len - 1];
+                wills[owner].beneficiaries[i] = wills[owner].beneficiaries[
+                    len - 1
+                ];
                 wills[owner].beneficiaries.pop();
                 break;
             }
         }
-        
+
         emit BeneficiaryRemoved(owner, beneficiary);
     }
-    
-    function updateAllocation(address owner, address beneficiary, uint256 allocation) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
+
+    function updateAllocation(
+        address owner,
+        address beneficiary,
+        uint256 allocation
+    ) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
         require(allocation > 0, "Need to allocate more than 0");
-        require(beneficiaryAlloc[owner][beneficiary] != 0, "Allocation does not exist");
-        
+        require(
+            beneficiaryAlloc[owner][beneficiary] != 0,
+            "Allocation does not exist"
+        );
+
         beneficiaryAlloc[owner][beneficiary] = allocation;
-        
-        
+
         emit AllocationUpdated(owner, beneficiary, allocation);
     }
-    
-    function viewWill(address owner) public onlyOwner(owner) onlyAuthorizedEditors(owner) view returns (string memory) {
+
+    function viewWill(
+        address owner
+    )
+        public
+        view
+        onlyOwner(owner)
+        onlyAuthorizedEditors(owner)
+        returns (string memory)
+    {
         require(wills[owner].owner != address(0), "Will does not exist");
-        
+
         WillData storage userWill = wills[owner];
         string memory willString = "Beneficiaries & Allocations:\n";
         uint256 numBeneficiaries = userWill.beneficiaries.length;
-        
+
         for (uint256 i = 0; i < numBeneficiaries; i++) {
             address beneficiary = userWill.beneficiaries[i];
             uint256 allocation = beneficiaryAlloc[owner][beneficiary];
-            
+
             // Convert address to full hex string WITHOUT "0x" prefix to match test expectations
-            string memory beneficiaryString = Strings.toHexString(uint256(uint160(beneficiary)), 20);
+            string memory beneficiaryString = Strings.toHexString(
+                uint256(uint160(beneficiary)),
+                20
+            );
             // Remove "0x" prefix to match test expectations (which removes the prefix)
-            beneficiaryString = substring(beneficiaryString, 2, bytes(beneficiaryString).length);
-            
+            beneficiaryString = substring(
+                beneficiaryString,
+                2,
+                bytes(beneficiaryString).length
+            );
+
             string memory allocationString = Strings.toString(allocation);
-            
+
             willString = string(
                 abi.encodePacked(
                     willString,
-                    "- ", beneficiaryString, " -> ", allocationString, "\n"
+                    "- ",
+                    beneficiaryString,
+                    " -> ",
+                    allocationString,
+                    "\n"
                 )
             );
         }
-    
+
         // emit WillViewed(owner);
-        
+
         return willString;
     }
 
-    // Copied same viewWill function to another function for more customisability 
-    function WillViewForBeneficiaries(address owner) public view onlyViewPermitted(owner) returns (string memory) {
-
+    // Copied same viewWill function to another function for more customisability
+    function WillViewForBeneficiaries(
+        address owner
+    ) public view onlyViewPermitted(owner) returns (string memory) {
         WillData storage userWill = wills[owner];
         string memory willString = "Beneficiaries & Allocations:\n";
         uint256 numBeneficiaries = userWill.beneficiaries.length;
@@ -178,9 +236,16 @@ contract Will {
         for (uint256 i = 0; i < numBeneficiaries; i++) {
             address beneficiary = userWill.beneficiaries[i];
             uint256 allocation = beneficiaryAlloc[owner][beneficiary];
-            
-            string memory beneficiaryString = Strings.toHexString(uint256(uint160(beneficiary)), 20);
-            beneficiaryString = substring(beneficiaryString, 2, bytes(beneficiaryString).length); 
+
+            string memory beneficiaryString = Strings.toHexString(
+                uint256(uint160(beneficiary)),
+                20
+            );
+            beneficiaryString = substring(
+                beneficiaryString,
+                2,
+                bytes(beneficiaryString).length
+            );
 
             string memory allocationString = Strings.toString(allocation);
 
@@ -205,10 +270,13 @@ contract Will {
         authorizedEditors[owner][editor] = true;
     }
 
-    function removeEditor(address owner, address editor) public onlyOwner(owner) {
+    function removeEditor(
+        address owner,
+        address editor
+    ) public onlyOwner(owner) {
         require(authorizedEditors[owner][editor], "Editor not found");
         authorizedEditors[owner][editor] = false;
-    } 
+    }
 
     function addViewer(address owner, address viewer) public onlyOwner(owner) {
         require(viewer != address(0), "Invalid viewer address");
@@ -216,30 +284,45 @@ contract Will {
         authorizedViewers[owner][viewer] = true;
     }
 
-    function removeViewer(address owner, address viewer) public onlyOwner(owner) {
+    function removeViewer(
+        address owner,
+        address viewer
+    ) public onlyOwner(owner) {
         require(authorizedViewers[owner][viewer], "Viewer not found");
         authorizedViewers[owner][viewer] = false;
-    } 
-
-    function getWillData(address owner) public view returns (WillData memory) {
-            return wills[owner];
     }
 
-    function checkBeneficiaries(address owner, address beneficiary) public view returns (bool check) {
-        return beneficiaryAlloc[owner][beneficiary] > 0;
-        }   
+    function getWillData(address owner) public view returns (WillData memory) {
+        return wills[owner];
+    }
 
-    function getBeneficiaryAllocation(address owner, address beneficiary) public view returns (uint256) {
+    function checkBeneficiaries(
+        address owner,
+        address beneficiary
+    ) public view returns (bool check) {
+        return beneficiaryAlloc[owner][beneficiary] > 0;
+    }
+
+    function getBeneficiaryAllocation(
+        address owner,
+        address beneficiary
+    ) public view returns (uint256) {
         require(wills[owner].owner != address(0), "Will does not exist");
         return beneficiaryAlloc[owner][beneficiary];
     }
 
-    function isAuthorisedEditorExist(address owner, address editor) public view returns (bool check) {
+    function isAuthorisedEditorExist(
+        address owner,
+        address editor
+    ) public view returns (bool check) {
         require(wills[owner].owner != address(0), "Will does not exist");
         return authorizedEditors[owner][editor];
     }
 
-    function isAuthorisedViewer(address owner, address viewer) public view returns (bool check) {
+    function isAuthorisedViewer(
+        address owner,
+        address viewer
+    ) public view returns (bool check) {
         require(wills[owner].owner != address(0), "Will does not exist");
         return authorizedViewers[owner][viewer];
     }
@@ -251,13 +334,16 @@ contract Will {
     */
 
     // Helper function to get substring
-    function substring(string memory str, uint startIndex, uint endIndex) private pure returns (string memory) {
+    function substring(
+        string memory str,
+        uint startIndex,
+        uint endIndex
+    ) private pure returns (string memory) {
         bytes memory strBytes = bytes(str);
         bytes memory result = new bytes(endIndex - startIndex);
-        for(uint i = startIndex; i < endIndex; i++) {
+        for (uint i = startIndex; i < endIndex; i++) {
             result[i - startIndex] = strBytes[i];
         }
         return string(result);
     }
-
 }
