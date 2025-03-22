@@ -78,7 +78,7 @@ describe("Will", function() {
         expect(willString).to.equal(expectedWill);
     });
 
-    it("should add an editor successfully", async function () {
+    it("Should add an editor successfully", async function () {
         await will.addEditor(owner.address, editor1.address);
         const isEditor = await will.authorizedEditors[owner.adress][editor1.address];
         expect(isEditor).to.equal(true);
