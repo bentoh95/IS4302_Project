@@ -6,6 +6,8 @@ contract Will {
     enum WillState {
         InCreation,
         InExecution,
+        DeathConfirmed,
+        GrantOfProbateConfirmed,
         Closed
     }
 
@@ -13,6 +15,7 @@ contract Will {
 
     struct WillData {
         address owner;
+        string nric;
         address[] beneficiaries;
         WillState state;
     }
@@ -21,6 +24,12 @@ contract Will {
     mapping(address => mapping(address => uint256)) private beneficiaryAlloc;
     mapping(address => mapping(address => bool)) private authorizedEditors; //willOwner address to editor address to F/T
     mapping(address => mapping(address => bool)) private authorizedViewers; // mapping of who has the permission to view will
+    //Keep track of will owners as we cannot loop through wills mapping
+    address[] public allWillOwners;
+
+    // Nrics that will be received from the government registries daily
+    string public deathRegistryNrics;
+    string public grantOfProbateNrics;
 
     event WillCreated(address indexed owner);
     event BeneficiaryAdded(
@@ -34,6 +43,28 @@ contract Will {
         address beneficiary,
         uint256 allocation
     );
+    event DeathToday(string nrics);
+    event GrantOfProbateToday(string nrics);
+
+    /* 
+    -------------------
+        CALLING DATABASES
+    -------------------
+    */
+
+    // Call death registry daily for new NRICS posted on the government death registry
+    function callDeathRegistryToday() public {
+        // data comes in from event listeners in format of S7654321B,S7654321A, S7654321C etc
+        deathRegistryNrics = "S7654321B";
+        emit DeathToday(deathRegistryNrics);
+    }
+
+    // Call grant of probate daily for new NRICS posted on the government Grant of Probate registry
+    function callGrantOfProbateToday() public {
+        // data comes in from event listeners in format of S7654321B,S7654321A, S7654321C etc
+        grantOfProbateNrics = "S7654321B";
+        emit GrantOfProbateToday(grantOfProbateNrics);
+    }
 
     /* 
     -------------------
@@ -100,7 +131,47 @@ contract Will {
         emit Test("Hello, Test event!");
     }
 
-    function createWill(address owner) public {
+    // function to update will state based on death nrics
+    function updateWillStateToDeathConfirmed() public {
+        string[] memory nrics = splitString(deathRegistryNrics, ",");
+        // Loop through all NRICs
+        for (uint256 i = 0; i < nrics.length; i++) {
+            string memory currentNric = nrics[i];
+            for (uint256 j = 0; j < allWillOwners.length; j++) {
+                address owner = allWillOwners[j];
+                WillData storage willData = wills[owner];
+                if (
+                    keccak256(bytes(willData.nric)) == keccak256(bytes(currentNric)) &&
+                    (willData.state == WillState.InCreation || willData.state == WillState.InExecution)
+                ) {
+                    willData.state = WillState.DeathConfirmed;
+                }
+            }
+        }
+        emit DeathToday(deathRegistryNrics);
+    }
+
+    // function to update will state based on death nrics
+    function updateWillStateToGrantOfProbateConfirmed() public {
+        string[] memory nrics = splitString(grantOfProbateNrics, ",");
+        // Loop through all NRICs
+        for (uint256 i = 0; i < nrics.length; i++) {
+            string memory currentNric = nrics[i];
+            for (uint256 j = 0; j < allWillOwners.length; j++) {
+                address owner = allWillOwners[j];
+                WillData storage willData = wills[owner];
+                if (
+                    keccak256(bytes(willData.nric)) == keccak256(bytes(currentNric)) &&
+                    (willData.state == WillState.DeathConfirmed)
+                ) {
+                    willData.state = WillState.GrantOfProbateConfirmed;
+                }
+            }
+        }
+        emit GrantOfProbateToday(grantOfProbateNrics);
+    }
+
+    function createWill(address owner, string memory nric) public {
         require(msg.sender != address(0), "Invalid sender address");
         require(wills[owner].owner == address(0), "Will already exists");
 
@@ -109,9 +180,12 @@ contract Will {
 
         wills[owner] = WillData({
             owner: owner,
+            nric: nric,
             beneficiaries: emptyArray,
             state: WillState.InCreation
         });
+
+        allWillOwners.push(owner);
 
         emit WillCreated(owner);
     }
@@ -326,6 +400,20 @@ contract Will {
         require(wills[owner].owner != address(0), "Will does not exist");
         return authorizedViewers[owner][viewer];
     }
+    
+    function getWillState(address owner) public view returns (string memory) {
+        require(wills[owner].owner != address(0), "Will does not exist");
+
+        WillState state = wills[owner].state;
+
+        if (state == WillState.InCreation) return "InCreation";
+        if (state == WillState.InExecution) return "InExecution";
+        if (state == WillState.DeathConfirmed) return "DeathConfirmed";
+        if (state == WillState.GrantOfProbateConfirmed) return "GrantOfProbateConfirmed";
+        if (state == WillState.Closed) return "Closed";
+
+        return "Unknown";
+    }
 
     /* 
     --------------------------
@@ -345,5 +433,40 @@ contract Will {
             result[i - startIndex] = strBytes[i];
         }
         return string(result);
+    }
+
+        //Helper funciton to split string for Death registry NRIC and grant of probate NRIC data
+    function splitString(string memory str, string memory delimiter) internal pure returns (string[] memory) {
+        bytes memory b = bytes(str);
+        bytes memory delim = bytes(delimiter);
+
+        uint count = 1;
+        for (uint i = 0; i < b.length; i++) {
+            if (b[i] == delim[0]) {
+                count++;
+            }
+        }
+
+        string[] memory parts = new string[](count);
+        uint k = 0;
+        uint lastIndex = 0;
+
+        for (uint i = 0; i < b.length; i++) {
+            if (b[i] == delim[0]) {
+                bytes memory temporary = new bytes(i - lastIndex);
+                for (uint j = lastIndex; j < i; j++) {
+                    temporary[j - lastIndex] = b[j];
+                }
+                parts[k++] = string(temporary);
+                lastIndex = i + 1;
+            }
+        }
+        bytes memory temp = new bytes(b.length - lastIndex);
+        for (uint i = lastIndex; i < b.length; i++) {
+            temp[i - lastIndex] = b[i];
+        }
+        parts[k] = string(temp);
+
+        return parts;
     }
 }
