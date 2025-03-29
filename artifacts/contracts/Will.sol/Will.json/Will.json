@@ -99,7 +99,6 @@
   },
   {
     "anonymous": false,
-<<<<<<< Updated upstream
     "inputs": [],
     "name": "DeathToday",
     "type": "event"
@@ -138,8 +137,6 @@
   },
   {
     "anonymous": false,
-=======
->>>>>>> Stashed changes
     "inputs": [
       {
         "indexed": false,
@@ -245,7 +242,7 @@
   {
     "inputs": [
       {
-<<<<<<< Updated upstream
+
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
@@ -279,8 +276,7 @@
   {
     "inputs": [
       {
-=======
->>>>>>> Stashed changes
+
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -308,14 +304,13 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-<<<<<<< Updated upstream
+
       },
       {
         "internalType": "string",
         "name": "nric",
         "type": "string"
-=======
->>>>>>> Stashed changes
+
       }
     ],
     "name": "createWill",
@@ -385,14 +380,13 @@
             "type": "address"
           },
           {
-<<<<<<< Updated upstream
+
             "internalType": "string",
             "name": "nric",
             "type": "string"
           },
           {
-=======
->>>>>>> Stashed changes
+
             "internalType": "address[]",
             "name": "beneficiaries",
             "type": "address[]"
@@ -417,7 +411,7 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-<<<<<<< Updated upstream
+
       }
     ],
     "name": "getWillState",
@@ -437,8 +431,7 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-=======
->>>>>>> Stashed changes
+
       },
       {
         "internalType": "address",
@@ -574,7 +567,6 @@
   {
     "inputs": [
       {
-<<<<<<< Updated upstream
         "internalType": "string",
         "name": "deathRegistryNrics",
         "type": "string"
@@ -601,8 +593,7 @@
   {
     "inputs": [
       {
-=======
->>>>>>> Stashed changes
+
         "internalType": "address",
         "name": "owner",
         "type": "address"
