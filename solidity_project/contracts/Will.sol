@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "hardhat/console.sol";
 
 contract Will {
     enum WillState {
@@ -12,6 +13,7 @@ contract Will {
     }
 
     event Test(string message);
+    event DataReceived(string newValue);
 
     struct WillData {
         address owner;
@@ -19,6 +21,8 @@ contract Will {
         address[] beneficiaries;
         WillState state;
     }
+
+    string storedValue;
 
     mapping(address => WillData) private wills;
     mapping(address => mapping(address => uint256)) private beneficiaryAlloc;
@@ -141,8 +145,10 @@ contract Will {
                 address owner = allWillOwners[j];
                 WillData storage willData = wills[owner];
                 if (
-                    keccak256(bytes(willData.nric)) == keccak256(bytes(currentNric)) &&
-                    (willData.state == WillState.InCreation || willData.state == WillState.InExecution)
+                    keccak256(bytes(willData.nric)) ==
+                    keccak256(bytes(currentNric)) &&
+                    (willData.state == WillState.InCreation ||
+                        willData.state == WillState.InExecution)
                 ) {
                     willData.state = WillState.DeathConfirmed;
                 }
@@ -161,7 +167,8 @@ contract Will {
                 address owner = allWillOwners[j];
                 WillData storage willData = wills[owner];
                 if (
-                    keccak256(bytes(willData.nric)) == keccak256(bytes(currentNric)) &&
+                    keccak256(bytes(willData.nric)) ==
+                    keccak256(bytes(currentNric)) &&
                     (willData.state == WillState.DeathConfirmed)
                 ) {
                     willData.state = WillState.GrantOfProbateConfirmed;
@@ -169,6 +176,16 @@ contract Will {
             }
         }
         emit GrantOfProbateToday(grantOfProbateNrics);
+    }
+
+    function receiveProcessedData(string memory _newValue) public {
+        console.log(_newValue);
+        storedValue = _newValue; // Store processed data
+        emit DataReceived(storedValue);
+    }
+
+    function getStoredValue() public view returns (string memory) {
+        return storedValue;
     }
 
     function createWill(address owner, string memory nric) public {
@@ -400,7 +417,7 @@ contract Will {
         require(wills[owner].owner != address(0), "Will does not exist");
         return authorizedViewers[owner][viewer];
     }
-    
+
     function getWillState(address owner) public view returns (string memory) {
         require(wills[owner].owner != address(0), "Will does not exist");
 
@@ -409,7 +426,8 @@ contract Will {
         if (state == WillState.InCreation) return "InCreation";
         if (state == WillState.InExecution) return "InExecution";
         if (state == WillState.DeathConfirmed) return "DeathConfirmed";
-        if (state == WillState.GrantOfProbateConfirmed) return "GrantOfProbateConfirmed";
+        if (state == WillState.GrantOfProbateConfirmed)
+            return "GrantOfProbateConfirmed";
         if (state == WillState.Closed) return "Closed";
 
         return "Unknown";
@@ -435,8 +453,11 @@ contract Will {
         return string(result);
     }
 
-        //Helper funciton to split string for Death registry NRIC and grant of probate NRIC data
-    function splitString(string memory str, string memory delimiter) internal pure returns (string[] memory) {
+    //Helper funciton to split string for Death registry NRIC and grant of probate NRIC data
+    function splitString(
+        string memory str,
+        string memory delimiter
+    ) internal pure returns (string[] memory) {
         bytes memory b = bytes(str);
         bytes memory delim = bytes(delimiter);
 

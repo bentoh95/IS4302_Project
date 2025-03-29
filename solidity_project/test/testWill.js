@@ -1,10 +1,11 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const { Web3 } = require("web3");
+const Web3 = require("web3");
 const fs = require("fs");
 require("dotenv").config();
 const path = require("path");
+const EthereumEventProcessor = require("ethereum-event-processor");
 
 const advanceTime = (web3, time) => {
   return new Promise((resolve, reject) => {
@@ -72,14 +73,21 @@ const getUnlockTime = async (web3) => {
   return unlockTime;
 };
 
-const web3ProviderUrl = process.env.PROVIDER_URL;
+const web3ProviderUrl = process.env.PROVIDER_WEBSOCKET_URL;
 const contractAddress = process.env.CONTRACT_ADDRESS;
 const contractABIPath = path.resolve(__dirname, process.env.CONTRACT_ABI_PATH);
 const contractJSON = JSON.parse(fs.readFileSync(contractABIPath, "utf-8"));
 const contractABI = contractJSON.abi;
 
-const web3 = new Web3(web3ProviderUrl);
+const web3 = new Web3(new Web3.providers.WebsocketProvider(web3ProviderUrl));
 const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+const eventOptions = {
+  pollingInterval: parseInt(process.env.EVENT_POOL_INTERVAL),
+  startBlock: 0,
+  blocksToWait: parseInt(process.env.EVENT_BLOCKS_TO_WAIT),
+  blocksToRead: parseInt(process.env.EVENT_BLOCKS_TO_READ),
+};
 
 describe("Will", function () {
   let Will;
@@ -365,6 +373,45 @@ describe("Will", function () {
     const tx = await contract.methods
       .emitTestEvent()
       .send({ from: accounts[0] });
+
     console.log(tx);
+
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
+
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
+
+      // Listen for the DataReceived event
+      eventListener.on("DataReceived", (event) => {
+        console.log("Event received:", event.returnValues);
+        resolve(event); // Resolve the promise when the event is captured
+      });
+
+      // Start listening for the event
+      eventListener.listen();
+    });
+
+    // Set a timeout for 1 minute
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
+
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise, timeoutPromise]);
+      console.log("Event successfully received:", event);
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
   });
 });

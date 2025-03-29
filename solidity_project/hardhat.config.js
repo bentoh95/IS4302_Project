@@ -12,12 +12,13 @@ module.exports = {
     spacing: 2,
   },
   solidity: "0.8.28",
-  localhost: {
-    url: "http://127.0.0.1:8545",
-  },
+
   networks: {
     dev: {
       url: process.env.PROVIDER_URL,
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545",
     },
   },
 };

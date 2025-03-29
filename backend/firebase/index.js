@@ -11,10 +11,11 @@ const bodyParser = require("body-parser");
 const db = require("./firebaseAdmin.js"); // Correctly import the Firestore instance
 const op = require("./firestoreOperations.js");
 const { ethers } = require("ethers");
-const { WebSocketProvider } = require("@ethersproject/providers");
 const path = require("path");
 
 const truthy = ["TRUE", "true", "True", "1"];
+
+const govDeathSimulationController = require("../controllers/govDeathSimulationController.js");
 
 /*app.use(
   cors({
@@ -103,11 +104,31 @@ async function startEventListener() {
   eventListener.on("Test", async (event) => {
     console.log("Event Captured: ", event);
     console.log("Event Return Values: ", event.returnValues);
+
+    const value = "ma";
+    await sendProcessedData(value);
+  });
+
+  eventListener.on("DataReceived", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Event Return Values: ", event.returnValues);
   });
 
   eventListener.listen();
 
   console.log("Event listener started");
+}
+
+async function sendProcessedData(processedValue) {
+  const accounts = await web3.eth.getAccounts();
+  const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+  await contract.methods.receiveProcessedData(processedValue).send({
+    from: accounts[0], // Use the first account
+    gas: 300000,
+  });
+
+  console.log("Processed data sent back to contract!");
 }
 
 // Call the async function
