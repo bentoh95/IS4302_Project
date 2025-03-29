@@ -320,48 +320,67 @@ describe("Will", function () {
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
-  //Test confirmDeath and GrantofProbateConfirmed state update
+  // it("test", async function () {
+  //   const unlockTime = await getUnlockTime(web3);
+
+  //   await advanceTime(web3, unlockTime);
+  //   await disableAutomine(web3);
+  //   await setMiningInterval(web3, 5000);
+
+  //   const accounts = await web3.eth.getAccounts();
+
+  //   const tx = await contract.methods
+  //     .emitTestEvent()
+  //     .send({ from: accounts[0] });
+
+  //   console.log(tx);
+
+  //   const latestBlock = await web3.eth.getBlock("latest");
+  //   eventOptions.startBlock = latestBlock.number;
+
+  //   const eventPromise = new Promise((resolve, reject) => {
+  //     const eventListener = new EthereumEventProcessor(
+  //       web3,
+  //       contractAddress,
+  //       contractABI,
+  //       eventOptions
+  //     );
+
+  //     // Listen for the DataReceived event
+  //     eventListener.on("DataReceived", (event) => {
+  //       console.log("Event received:", event.returnValues);
+  //       resolve(event); // Resolve the promise when the event is captured
+  //     });
+
+  //     // Start listening for the event
+  //     eventListener.listen();
+  //   });
+
+  //   // Set a timeout for 1 minute
+  //   const timeoutPromise = new Promise((_, reject) =>
+  //     setTimeout(
+  //       () =>
+  //         reject(new Error("Timeout: DataReceived event not received in time")),
+  //       60000
+  //     )
+  //   );
+
+  //   // Wait for either the event or the timeout (whichever happens first)
+  //   try {
+  //     const event = await Promise.race([eventPromise, timeoutPromise]);
+  //     console.log("Event successfully received:", event);
+  //   } catch (error) {
+  //     console.error("Error or timeout:", error.message);
+  //   }
+  // });
+
+  // Test confirmDeath and GrantofProbateConfirmed state update
   it("Should change will state to confirmDeath when we call government death registry and the corresponding NRIC has been posted", async function () {
     await will.createWill(owner.address, "S7654321B");
+    this.timeout(60000);
     //S7654321B was posted today in Death Registry
-    await will.callDeathRegistryToday();
     expect(await will.getWillState(owner.address)).to.equal("InCreation");
-    await will.updateWillStateToDeathConfirmed();
-    expect(await will.getWillState(owner.address)).to.equal("DeathConfirmed");
-  });
 
-  it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
-    await will.createWill(owner.address, "T1234567J");
-    //T1234567J was not posted today in Death Registry
-    await will.callDeathRegistryToday();
-    expect(await will.getWillState(owner.address)).to.equal("InCreation");
-    await will.updateWillStateToDeathConfirmed();
-    //T1234567J was not posted today so the will state did not get updated to confirmDeath
-    expect(await will.getWillState(owner.address)).to.equal("InCreation");
-  });
-
-  it("Should change will state to GrantOfProbateConfirmed when state is in confirmDeath and the corresponding NRIC has been posted to the government Grant of Probate registry", async function () {
-    await will.createWill(owner.address, "S7654321B");
-    //S7654321B was posted today in Death Registry
-    await will.callDeathRegistryToday();
-    expect(await will.getWillState(owner.address)).to.equal("InCreation");
-    await will.updateWillStateToDeathConfirmed();
-    expect(await will.getWillState(owner.address)).to.equal("DeathConfirmed");
-    //S7654321B was posted today in Grant of Probate Registry
-    await will.callGrantOfProbateToday();
-    await will.updateWillStateToGrantOfProbateConfirmed();
-    expect(await will.getWillState(owner.address)).to.equal("GrantOfProbateConfirmed");
-  });
-
-  it("Should not change will state to GrantOfProbateConfirmed when state is not confirmDeath", async function () {
-    await will.createWill(owner.address, "S7654321B");
-    //S7654321B was posted today
-    await will.callGrantOfProbateToday();
-    await will.updateWillStateToGrantOfProbateConfirmed();
-    expect(await will.getWillState(owner.address)).to.equal("InCreation");
-  });
-
-  it("test", async function () {
     const unlockTime = await getUnlockTime(web3);
 
     await advanceTime(web3, unlockTime);
@@ -371,7 +390,7 @@ describe("Will", function () {
     const accounts = await web3.eth.getAccounts();
 
     const tx = await contract.methods
-      .emitTestEvent()
+      .callDeathRegistryToday()
       .send({ from: accounts[0] });
 
     console.log(tx);
@@ -388,7 +407,7 @@ describe("Will", function () {
       );
 
       // Listen for the DataReceived event
-      eventListener.on("DataReceived", (event) => {
+      eventListener.on("DeathUpdated", (event) => {
         console.log("Event received:", event.returnValues);
         resolve(event); // Resolve the promise when the event is captured
       });
@@ -413,5 +432,227 @@ describe("Will", function () {
     } catch (error) {
       console.error("Error or timeout:", error.message);
     }
+    expect(await will.getWillState(owner.address)).to.equal("DeathConfirmed");
+  });
+
+  it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
+    await will.createWill(owner.address, "T1234567J");
+    //T1234567J was not posted today in Death Registry
+    expect(await will.getWillState(owner.address)).to.equal("InCreation");
+    const unlockTime = await getUnlockTime(web3);
+
+    await advanceTime(web3, unlockTime);
+    await disableAutomine(web3);
+    await setMiningInterval(web3, 5000);
+
+    const accounts = await web3.eth.getAccounts();
+
+    const tx = await contract.methods
+      .callDeathRegistryToday()
+      .send({ from: accounts[0] });
+
+    console.log(tx);
+
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
+
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
+
+      // Listen for the DataReceived event
+      eventListener.on("DeathUpdated", (event) => {
+        console.log("Event received:", event.returnValues);
+        resolve(event); // Resolve the promise when the event is captured
+      });
+
+      // Start listening for the event
+      eventListener.listen();
+    });
+
+    // Set a timeout for 1 minute
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
+
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise, timeoutPromise]);
+      console.log("Event successfully received:", event);
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
+    //T1234567J was not posted today so the will state did not get updated to confirmDeath
+    expect(await will.getWillState(owner.address)).to.equal("InCreation");
+  });
+
+  it("Should change will state to GrantOfProbateConfirmed when state is in confirmDeath and the corresponding NRIC has been posted to the government Grant of Probate registry", async function () {
+    await will.createWill(owner.address, "S7654321B");
+    this.timeout(60000);
+    //S7654321B was posted today in Death Registry
+    expect(await will.getWillState(owner.address)).to.equal("InCreation");
+    const unlockTime = await getUnlockTime(web3);
+
+    await advanceTime(web3, unlockTime);
+    await disableAutomine(web3);
+    await setMiningInterval(web3, 5000);
+
+    const accounts = await web3.eth.getAccounts();
+
+    const tx = await contract.methods
+      .callDeathRegistryToday()
+      .send({ from: accounts[0] });
+
+    console.log(tx);
+
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
+
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
+
+      // Listen for the DataReceived event
+      eventListener.on("DeathUpdated", (event) => {
+        console.log("Event received:", event.returnValues);
+        resolve(event); // Resolve the promise when the event is captured
+      });
+
+      // Start listening for the event
+      eventListener.listen();
+    });
+
+    // Set a timeout for 1 minute
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
+
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise, timeoutPromise]);
+      console.log("Event successfully received:", event);
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
+    expect(await will.getWillState(owner.address)).to.equal("DeathConfirmed");
+    //S7654321B was posted today in Grant of Probate Registry
+
+    const tx2 = await contract.methods
+      .callGrantOfProbateToday()
+      .send({ from: accounts[0] });
+
+    console.log(tx2);
+
+    const eventPromise2 = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
+
+      // Listen for the DataReceived event
+      eventListener.on("ProbateUpdated", (event) => {
+        console.log("Event received:", event.returnValues);
+        resolve(event); // Resolve the promise when the event is captured
+      });
+
+      // Start listening for the event
+      eventListener.listen();
+    });
+
+    // Set a timeout for 1 minute
+    const timeoutPromise2 = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
+
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise2, timeoutPromise2]);
+      console.log("Event successfully received:", event);
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
+    expect(await will.getWillState(owner.address)).to.equal(
+      "GrantOfProbateConfirmed"
+    );
+  });
+
+  it("Should not change will state to GrantOfProbateConfirmed when state is not confirmDeath", async function () {
+    await will.createWill(owner.address, "S7654321B");
+    this.timeout(60000);
+    //S7654321B was posted today
+    const unlockTime = await getUnlockTime(web3);
+
+    await advanceTime(web3, unlockTime);
+    await disableAutomine(web3);
+    await setMiningInterval(web3, 5000);
+
+    const accounts = await web3.eth.getAccounts();
+
+    const tx = await contract.methods
+      .callGrantOfProbateToday()
+      .send({ from: accounts[0] });
+
+    console.log(tx);
+
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
+
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
+
+      // Listen for the DataReceived event
+      eventListener.on("ProbateUpdated", (event) => {
+        console.log("Event received:", event.returnValues);
+        resolve(event); // Resolve the promise when the event is captured
+      });
+
+      // Start listening for the event
+      eventListener.listen();
+    });
+
+    // Set a timeout for 1 minute
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
+
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise, timeoutPromise]);
+      console.log("Event successfully received:", event);
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
+    expect(await will.getWillState(owner.address)).to.equal("InCreation");
   });
 });

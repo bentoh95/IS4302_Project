@@ -15,6 +15,9 @@ contract Will {
     event Test(string message);
     event DataReceived(string newValue);
 
+    event DeathUpdated(string value);
+    event ProbateUpdated(string value);
+
     struct WillData {
         address owner;
         string nric;
@@ -31,10 +34,6 @@ contract Will {
     //Keep track of will owners as we cannot loop through wills mapping
     address[] public allWillOwners;
 
-    // Nrics that will be received from the government registries daily
-    string public deathRegistryNrics;
-    string public grantOfProbateNrics;
-
     event WillCreated(address indexed owner);
     event BeneficiaryAdded(
         address indexed owner,
@@ -47,8 +46,8 @@ contract Will {
         address beneficiary,
         uint256 allocation
     );
-    event DeathToday(string nrics);
-    event GrantOfProbateToday(string nrics);
+    event DeathToday();
+    event GrantOfProbateToday();
 
     /* 
     -------------------
@@ -59,15 +58,13 @@ contract Will {
     // Call death registry daily for new NRICS posted on the government death registry
     function callDeathRegistryToday() public {
         // data comes in from event listeners in format of S7654321B,S7654321A, S7654321C etc
-        deathRegistryNrics = "S7654321B";
-        emit DeathToday(deathRegistryNrics);
+        emit DeathToday();
     }
 
     // Call grant of probate daily for new NRICS posted on the government Grant of Probate registry
     function callGrantOfProbateToday() public {
         // data comes in from event listeners in format of S7654321B,S7654321A, S7654321C etc
-        grantOfProbateNrics = "S7654321B";
-        emit GrantOfProbateToday(grantOfProbateNrics);
+        emit GrantOfProbateToday();
     }
 
     /* 
@@ -136,7 +133,10 @@ contract Will {
     }
 
     // function to update will state based on death nrics
-    function updateWillStateToDeathConfirmed() public {
+    function updateWillStateToDeathConfirmed(
+        string memory deathRegistryNrics
+    ) public {
+        console.log(deathRegistryNrics);
         string[] memory nrics = splitString(deathRegistryNrics, ",");
         // Loop through all NRICs
         for (uint256 i = 0; i < nrics.length; i++) {
@@ -154,11 +154,13 @@ contract Will {
                 }
             }
         }
-        emit DeathToday(deathRegistryNrics);
+        emit DeathUpdated(deathRegistryNrics);
     }
 
     // function to update will state based on death nrics
-    function updateWillStateToGrantOfProbateConfirmed() public {
+    function updateWillStateToGrantOfProbateConfirmed(
+        string memory grantOfProbateNrics
+    ) public {
         string[] memory nrics = splitString(grantOfProbateNrics, ",");
         // Loop through all NRICs
         for (uint256 i = 0; i < nrics.length; i++) {
@@ -175,7 +177,7 @@ contract Will {
                 }
             }
         }
-        emit GrantOfProbateToday(grantOfProbateNrics);
+        emit ProbateUpdated(grantOfProbateNrics);
     }
 
     function receiveProcessedData(string memory _newValue) public {

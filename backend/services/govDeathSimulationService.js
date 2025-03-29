@@ -65,4 +65,32 @@ const getAllDeathToday = async () => {
   }
 };
 
-module.exports = { getDeathCertURL, confirmDeath, getAllDeathToday };
+const getAllDeathNRICToday = async () => {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+    const snapshot = await db
+      .collection("death_certificate")
+      .where("deathDate", ">=", startOfDay)
+      .where("deathDate", "<=", endOfDay)
+      .get();
+    if (snapshot.empty) {
+      return "";
+    } else {
+      const results = snapshot.docs.map((doc) => doc.data().deceasedNRIC);
+      return results.join(",");
+    }
+  } catch (error) {
+    throw {
+      message: error.message || error,
+    };
+  }
+};
+
+module.exports = {
+  getDeathCertURL,
+  confirmDeath,
+  getAllDeathToday,
+  getAllDeathNRICToday,
+};

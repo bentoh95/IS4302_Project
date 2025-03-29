@@ -90,11 +90,16 @@
       {
         "indexed": false,
         "internalType": "string",
-<<<<<<< Updated upstream
-        "name": "nrics",
+        "name": "newValue",
         "type": "string"
       }
     ],
+    "name": "DataReceived",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [],
     "name": "DeathToday",
     "type": "event"
   },
@@ -104,18 +109,30 @@
       {
         "indexed": false,
         "internalType": "string",
-        "name": "nrics",
+        "name": "value",
         "type": "string"
       }
     ],
+    "name": "DeathUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [],
     "name": "GrantOfProbateToday",
-=======
-        "name": "newValue",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "value",
         "type": "string"
       }
     ],
-    "name": "DataReceived",
->>>>>>> Stashed changes
+    "name": "ProbateUpdated",
     "type": "event"
   },
   {
@@ -225,7 +242,6 @@
   {
     "inputs": [
       {
-<<<<<<< Updated upstream
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
@@ -259,8 +275,6 @@
   {
     "inputs": [
       {
-=======
->>>>>>> Stashed changes
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -288,14 +302,11 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-<<<<<<< Updated upstream
       },
       {
         "internalType": "string",
         "name": "nric",
         "type": "string"
-=======
->>>>>>> Stashed changes
       }
     ],
     "name": "createWill",
@@ -305,22 +316,6 @@
   },
   {
     "inputs": [],
-<<<<<<< Updated upstream
-    "name": "deathRegistryNrics",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-=======
->>>>>>> Stashed changes
     "name": "emitTestEvent",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -351,8 +346,6 @@
     "type": "function"
   },
   {
-<<<<<<< Updated upstream
-=======
     "inputs": [],
     "name": "getStoredValue",
     "outputs": [
@@ -366,7 +359,6 @@
     "type": "function"
   },
   {
->>>>>>> Stashed changes
     "inputs": [
       {
         "internalType": "address",
@@ -384,14 +376,11 @@
             "type": "address"
           },
           {
-<<<<<<< Updated upstream
             "internalType": "string",
             "name": "nric",
             "type": "string"
           },
           {
-=======
->>>>>>> Stashed changes
             "internalType": "address[]",
             "name": "beneficiaries",
             "type": "address[]"
@@ -416,23 +405,9 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-<<<<<<< Updated upstream
       }
     ],
     "name": "getWillState",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "grantOfProbateNrics",
     "outputs": [
       {
         "internalType": "string",
@@ -449,8 +424,6 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-=======
->>>>>>> Stashed changes
       },
       {
         "internalType": "address",
@@ -496,8 +469,6 @@
   {
     "inputs": [
       {
-<<<<<<< Updated upstream
-=======
         "internalType": "string",
         "name": "_newValue",
         "type": "string"
@@ -511,7 +482,6 @@
   {
     "inputs": [
       {
->>>>>>> Stashed changes
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -587,23 +557,32 @@
     "type": "function"
   },
   {
-<<<<<<< Updated upstream
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "deathRegistryNrics",
+        "type": "string"
+      }
+    ],
     "name": "updateWillStateToDeathConfirmed",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "grantOfProbateNrics",
+        "type": "string"
+      }
+    ],
     "name": "updateWillStateToGrantOfProbateConfirmed",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-=======
->>>>>>> Stashed changes
     "inputs": [
       {
         "internalType": "address",

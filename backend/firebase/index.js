@@ -15,7 +15,8 @@ const path = require("path");
 
 const truthy = ["TRUE", "true", "True", "1"];
 
-const govDeathSimulationController = require("../controllers/govDeathSimulationController.js");
+const govDeathSimulationService = require("../services/govDeathSimulationService.js");
+const grantOfProbateSimulationService = require("../services/grantOfProbateSimulationService.js");
 
 /*app.use(
   cors({
@@ -114,6 +115,31 @@ async function startEventListener() {
     console.log("Event Return Values: ", event.returnValues);
   });
 
+  eventListener.on("DeathToday", async (event) => {
+    console.log("Event Captured: ", event);
+    const result = await govDeathSimulationService.getAllDeathNRICToday();
+
+    await sendProcessedDeathToday(result);
+  });
+
+  eventListener.on("GrantOfProbateToday", async (event) => {
+    console.log("Event Captured: ", event);
+    const result =
+      await grantOfProbateSimulationService.getAllGrantOfProbateNRICToday();
+
+    await sendProcessedProbateToday(result);
+  });
+
+  eventListener.on("DeathUpdated", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Successfully updated death");
+  });
+
+  eventListener.on("ProbateUpdated", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Successfully updated probate");
+  });
+
   eventListener.listen();
 
   console.log("Event listener started");
@@ -127,6 +153,32 @@ async function sendProcessedData(processedValue) {
     from: accounts[0], // Use the first account
     gas: 300000,
   });
+
+  console.log("Processed data sent back to contract!");
+}
+
+async function sendProcessedDeathToday(processedValue) {
+  const accounts = await web3.eth.getAccounts();
+  const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+  await contract.methods.updateWillStateToDeathConfirmed(processedValue).send({
+    from: accounts[0], // Use the first account
+    gas: 300000,
+  });
+
+  console.log("Processed data sent back to contract!");
+}
+
+async function sendProcessedProbateToday(processedValue) {
+  const accounts = await web3.eth.getAccounts();
+  const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+  await contract.methods
+    .updateWillStateToGrantOfProbateConfirmed(processedValue)
+    .send({
+      from: accounts[0], // Use the first account
+      gas: 300000,
+    });
 
   console.log("Processed data sent back to contract!");
 }

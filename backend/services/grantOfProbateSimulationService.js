@@ -22,7 +22,10 @@ const getGrantOfProbateURL = async (deceasedNRIC) => {
 
 const confirmGrantOfProbate = async (deceasedNRIC) => {
   try {
-    const snapshot = await db.collection("grants_of_probate").doc(deceasedNRIC).get();
+    const snapshot = await db
+      .collection("grants_of_probate")
+      .doc(deceasedNRIC)
+      .get();
     if (snapshot.exists) {
       return true;
     } else {
@@ -62,4 +65,35 @@ const getAllGrantOfProbateToday = async () => {
   }
 };
 
-module.exports = { getGrantOfProbateURL , confirmGrantOfProbate, getAllGrantOfProbateToday };
+const getAllGrantOfProbateNRICToday = async () => {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const snapshot = await db
+      .collection("grants_of_probate")
+      .where("grantDate", ">=", startOfDay)
+      .where("grantDate", "<=", endOfDay)
+      .get();
+
+    if (snapshot.empty) {
+      return ""; // Return an empty array instead of throwing an error
+    }
+
+    const results = snapshot.docs.map((doc) => doc.data().deceasedNRIC);
+    return results.join(",");
+  } catch (error) {
+    throw new Error(error.message || error);
+  }
+};
+
+module.exports = {
+  getGrantOfProbateURL,
+  confirmGrantOfProbate,
+  getAllGrantOfProbateToday,
+  getAllGrantOfProbateNRICToday,
+};
