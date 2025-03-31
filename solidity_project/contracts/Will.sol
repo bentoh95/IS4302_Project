@@ -4,11 +4,17 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./willLib.sol";
 import "./willFormat.sol";
+import "./AssetRegistry.sol";
 
 contract Will {
+    AssetRegistry public assetRegistry;
     using WillLib for WillLib.WillData;
     using WillLib for address[];
-    using WillFormat for WillLib.WillData;
+    
+    constructor(address _assetRegistryAddress) {
+        require(_assetRegistryAddress != address(0), "Invalid address");
+        assetRegistry = AssetRegistry(_assetRegistryAddress);
+    }
     
     mapping(address => WillLib.WillData) private wills;
     mapping(address => mapping(address => uint256)) private beneficiaryAllocPercentages;
@@ -31,7 +37,7 @@ contract Will {
         PERMISSIONS
     -------------------
     */
-    modifier onlyOwner(address owner) {
+    modifier onlyWillOwner(address owner) {
         require(wills[owner].owner == msg.sender, "Not the owner");
         _;
     }
@@ -101,13 +107,15 @@ contract Will {
         
         // Initialize empty array with proper syntax
         address[] memory emptyArray = new address[](0);
+        uint256[] memory emptyArray2 = new uint256[](0);
         
         wills[owner] = WillLib.WillData({
             owner: owner,
             beneficiaries: emptyArray,
             digitalAssets: 0,
             state: WillLib.WillState.InCreation,
-            residualBeneficiary: address(0)
+            residualBeneficiary: address(0),
+            assetIds: emptyArray2
         });
         
         emit WillCreated(owner);
@@ -256,7 +264,7 @@ contract Will {
     }
 
     // Function to add digital assets to the will
-    function fundWill(address owner) external payable onlyOwner(owner) {
+    function fundWill(address owner) external payable onlyWillOwner(owner) {
         require(msg.value > 0, "Must send ETH");
         wills[owner].digitalAssets += msg.value;
         emit WillFunded(owner, msg.value);
@@ -301,35 +309,35 @@ contract Will {
         return distributionDetails;
     }
 
-    function viewWill(address owner) public onlyOwner(owner) onlyAuthorizedEditors(owner) view returns (string memory) {
+    function viewWill(address owner) public onlyWillOwner(owner) onlyAuthorizedEditors(owner) view returns (string memory) {
         require(wills[owner].owner != address(0), "Will does not exist");
-        return WillFormat.formatWillView(wills[owner], beneficiaryAllocPercentages);
+        return WillFormat.formatWillView(assetRegistry, wills[owner], beneficiaryAllocPercentages);
     }
 
     // View function for beneficiaries
     function WillViewForBeneficiaries(address owner) public view onlyViewPermitted(owner) returns (string memory) {
         // Use the same formatting function but without the digital assets section
-        return WillFormat.formatWillView(wills[owner], beneficiaryAllocPercentages);
+        return WillFormat.formatWillView(assetRegistry, wills[owner], beneficiaryAllocPercentages);
     }
 
-    function addEditor(address owner, address editor) public onlyOwner(owner) {
+    function addEditor(address owner, address editor) public onlyWillOwner(owner) {
         require(editor != address(0), "Invalid editor address");
         require(!authorizedEditors[owner][editor], "Editor already exists");
         authorizedEditors[owner][editor] = true;
     }
 
-    function removeEditor(address owner, address editor) public onlyOwner(owner) {
+    function removeEditor(address owner, address editor) public onlyWillOwner(owner) {
         require(authorizedEditors[owner][editor], "Editor not found");
         authorizedEditors[owner][editor] = false;
     } 
 
-    function addViewer(address owner, address viewer) public onlyOwner(owner) {
+    function addViewer(address owner, address viewer) public onlyWillOwner(owner) {
         require(viewer != address(0), "Invalid viewer address");
         require(!authorizedViewers[owner][viewer], "Viewer already exists");
         authorizedViewers[owner][viewer] = true;
     }
 
-    function removeViewer(address owner, address viewer) public onlyOwner(owner) {
+    function removeViewer(address owner, address viewer) public onlyWillOwner(owner) {
         require(authorizedViewers[owner][viewer], "Viewer not found");
         authorizedViewers[owner][viewer] = false;
     } 
@@ -362,9 +370,38 @@ contract Will {
         return authorizedViewers[owner][viewer];
     }
 
-    function setResidualBeneficiary(address owner, address beneficiary) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
+    function setResidualBeneficiary(address owner, address beneficiary) public onlyWillOwner(owner) onlyAuthorizedEditors(owner) {
         require(wills[owner].state == WillLib.WillState.InCreation, "Cannot modify after execution");
         require(beneficiary != address(0), "Invalid beneficiary address"); 
         wills[owner].residualBeneficiary = beneficiary;
     }
+
+    /***************************
+     * ASSET REGISTRY
+    ****************************/ 
+    // Todos: ensure certificationUrl is valid
+    function createAsset(address owner, string memory description, uint256 value, string memory certificationUrl, address[] memory beneficiaries, uint256[] memory allocations) public onlyWillOwner(owner) {
+        uint256 assetId = assetRegistry.createAsset(owner, description, value, certificationUrl, beneficiaries, allocations);
+        wills[owner].assetIds.push(assetId);
+    }
+
+    function viewAssetDescription(uint256 assetId) external view returns (string memory) {
+        return assetRegistry.getAssetInfo(assetId);
+    }
+
+    // Todos: should automatically trigger after submitting grant of probate
+    // Todos: only platform can trigger distribution
+    function triggerDistribution(address assetOwner, uint256 assetId) internal {
+        WillLib.WillData storage userWill = wills[assetOwner];
+        require(userWill.owner != address(0), "Will does not exist");
+
+        if (userWill.state == WillLib.WillState.InExecution) {
+            assetRegistry.distributeAsset(assetId);
+        }
+    }
+
+    function updateAssetBeneficiariesAndAllocations(uint256 assetId, address[] memory newBeneficiaries, uint256[] memory newAllocations) external {
+        assetRegistry.updateBeneficiariesAndAllocations(assetId, newBeneficiaries, newAllocations);
+    }
+
 }

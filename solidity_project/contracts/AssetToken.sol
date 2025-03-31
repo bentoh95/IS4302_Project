@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *         In a more advanced setup, you might keep share logic in a separate registry,
  *         but this example demonstrates storing it in the token contract itself.
  */
-contract AssetToken is ERC721, Ownable(msg.sender) {
+contract AssetToken is ERC721 {
     /// @dev Token ID counter to increment each time we mint.
     uint256 private _nextTokenId;
 
@@ -49,7 +49,7 @@ contract AssetToken is ERC721, Ownable(msg.sender) {
      */
 
     // Create tokens only after death, in that case owner is the platform since the platform is creating
-    function mint(address to) external onlyOwner returns (uint256) {
+    function mint(address to) external returns (uint256) {
         uint256 tokenId = _nextTokenId;
         _nextTokenId++;
 
@@ -72,7 +72,7 @@ contract AssetToken is ERC721, Ownable(msg.sender) {
         address to,
         uint256 assetId,
         uint256 sharePercentage
-    ) external onlyOwner returns (uint256) {
+    ) external returns (uint256) {
         require(sharePercentage > 0, "Share must be > 0");
 
         uint256 tokenId = _nextTokenId;

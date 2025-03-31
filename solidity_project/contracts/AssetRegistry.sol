@@ -18,13 +18,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *     
  * */
 
-contract AssetRegistry is Ownable(msg.sender) {
+contract AssetRegistry {
     /// @notice Reference to the deployed ERC721 contract (AssetToken).
     AssetToken public assetToken;
     uint256 private _nextAssetId = 1;
 
     /// @dev Stores basic info about each asset.
     struct AssetInfo {
+        address assetOwner;
         string description;   // E.g., "House on 123 Street"
         bool isExecuted; // Whether it has been distributed // TODOS: change to state
         bool isLocked; // Whether the person died
@@ -59,7 +60,7 @@ contract AssetRegistry is Ownable(msg.sender) {
      * Requirements:
      * - Only the contract owner can create an asset in this simplified design.
      */
-    function createAsset(string memory description, uint256 value, string memory certificationUrl, address[] memory beneficiaries, uint256[] memory allocations) external onlyOwner {
+    function createAsset(address assetOwner, string memory description, uint256 value, string memory certificationUrl, address[] memory beneficiaries, uint256[] memory allocations) external returns (uint256){
         bytes32 assetKey = keccak256(abi.encodePacked(description, value, certificationUrl));
         require(!assetKeyExists[assetKey], "Asset already exists");
 
@@ -83,6 +84,7 @@ contract AssetRegistry is Ownable(msg.sender) {
         }
 
         assets[assetId] = AssetInfo({
+            assetOwner: assetOwner,
             description: description,
             isExecuted: false,
             isLocked: false,
@@ -91,6 +93,12 @@ contract AssetRegistry is Ownable(msg.sender) {
             certificationUrl: certificationUrl,
             beneficiaries: beneficiaries
         });
+
+        return assetId;
+    }
+
+    function getAssetData(uint256 assetId) public view returns (AssetInfo memory) {
+        return assets[assetId];
     }
 
     /*
@@ -102,7 +110,7 @@ contract AssetRegistry is Ownable(msg.sender) {
         uint256 assetId,
         address[] memory newBeneficiaries,
         uint256[] memory newAllocations
-    ) external onlyOwner {
+    ) external {
         require(assets[assetId].exists, "Asset does not exist");
         require(!assets[assetId].isExecuted, "Asset already executed");
         require(newBeneficiaries.length == newAllocations.length, "Mismatched arrays");
@@ -120,6 +128,7 @@ contract AssetRegistry is Ownable(msg.sender) {
             require(newAllocations[i] > 0, "Allocation must be greater than 0");
             totalAlloc += newAllocations[i];
         }
+        require(totalAlloc == 100, "Allocations are not totalled to 100");
 
         // Update mappings and assign
         assets[assetId].beneficiaries = newBeneficiaries;
@@ -128,7 +137,7 @@ contract AssetRegistry is Ownable(msg.sender) {
         }
     }
 
-    function distributeAsset(uint256 assetId) external onlyOwner {
+    function distributeAsset(uint256 assetId) external {
         require(assets[assetId].exists, "Asset does not exist");
         require(!assets[assetId].isExecuted, "Already executed");
 
@@ -162,9 +171,10 @@ contract AssetRegistry is Ownable(msg.sender) {
         address to,
         uint256 assetId,
         uint256 sharePercentage
-    ) external onlyOwner {
+    ) external {
         require(assets[assetId].exists, "Asset does not exist");
         require(sharePercentage > 0, "Share must be > 0");
+        require(sharePercentage < 100, "Share must be < 100");
 
         // Mint the token in the AssetToken contract
         // (which also sets tokenToAssetId[tokenId] and tokenSharePercentage[tokenId])
@@ -184,4 +194,9 @@ contract AssetRegistry is Ownable(msg.sender) {
 
     // when setting allocation, take in arr of address for beneficiary
     // and its allocation
+    function getBeneficiaryAllocation(uint256 assetId, address beneficiary) external view returns (uint256) {
+        return beneficiaryAllocPercentages[assetId][beneficiary];
+    }
+
 }
+

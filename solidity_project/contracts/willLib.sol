@@ -11,10 +11,10 @@ library WillLib {
         uint256 digitalAssets;
         WillState state;
         address residualBeneficiary;
+        uint256[] assetIds;
     }
-
     
-    // Helper function for validating beneficiary allocation percentages
+    // Helper function for validating beneficiary allocation percentages // TODO: why are we not using this !?!?!
     function validateAllocations(uint256[] memory allocations) internal pure returns (uint256) {
         uint256 total = 0;
         for (uint256 i = 0; i < allocations.length; i++) {

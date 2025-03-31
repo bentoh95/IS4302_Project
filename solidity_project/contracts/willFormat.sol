@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./willLib.sol";
+import "./AssetRegistry.sol";
 
 library WillFormat {
     // Helper function to get substring
@@ -16,32 +17,74 @@ library WillFormat {
     }
 
     // Formatting function for will view
-    function formatWillView(WillLib.WillData storage userWill, mapping(address => mapping(address => uint256)) storage beneficiaryAllocPercentages) internal view returns (string memory) {
-        string memory willString = "Beneficiaries & Allocations:\n";
+    function formatWillView(
+        AssetRegistry assetRegistry,
+        WillLib.WillData storage userWill,
+        mapping(address => mapping(address => uint256)) storage beneficiaryAllocPercentages
+    ) internal view returns (string memory) {
+        string memory willString = "=== DIGITAL ASSETS ===\nBeneficiaries & Allocations:\n";
+
         uint256 numBeneficiaries = userWill.beneficiaries.length;
-        
         for (uint256 i = 0; i < numBeneficiaries; i++) {
             address beneficiary = userWill.beneficiaries[i];
             uint256 allocation = beneficiaryAllocPercentages[userWill.owner][beneficiary];
-            
-            // Convert address to full hex string WITHOUT "0x" prefix
+
             string memory beneficiaryString = Strings.toHexString(uint256(uint160(beneficiary)), 20);
-            // Remove "0x" prefix
             beneficiaryString = substring(beneficiaryString, 2, bytes(beneficiaryString).length);
-            
-            string memory allocationString = Strings.toString(allocation);
-            
+
             willString = string(
                 abi.encodePacked(
                     willString,
-                    "- ", beneficiaryString, " -> ", allocationString, "\n"
+                    "- ", beneficiaryString, " -> ", Strings.toString(allocation), "%\n"
                 )
             );
         }
 
-        string memory digitalAssetsString = Strings.toString(userWill.digitalAssets);
-        willString = string(abi.encodePacked(willString, "Total Digital Assets: ", digitalAssetsString, "\n"));
-        
+        willString = string(abi.encodePacked(
+            willString,
+            "Total Digital Assets (Wei): ",
+            Strings.toString(userWill.digitalAssets),
+            "\n\n"
+        ));
+
+        willString = string(abi.encodePacked(
+            willString,
+            "=== PHYSICAL ASSETS ===\n"
+        ));
+
+        for (uint256 i = 0; i < userWill.assetIds.length; i++) {
+            uint256 assetId = userWill.assetIds[i];
+            AssetRegistry.AssetInfo memory asset = assetRegistry.getAssetData(assetId);
+
+            willString = string(abi.encodePacked(
+                willString,
+                "Asset ID: ", Strings.toString(assetId), "\n",
+                "Description: ", asset.description, "\n",
+                "Value: ", Strings.toString(asset.value), "\n"
+            ));
+
+            for (uint256 j = 0; j < asset.beneficiaries.length; j++) {
+                address beneficiary = asset.beneficiaries[j];
+                uint256 allocation = assetRegistry.getBeneficiaryAllocation(assetId, beneficiary); 
+
+                string memory beneficiaryString = Strings.toHexString(uint256(uint160(beneficiary)), 20);
+                beneficiaryString = substring(beneficiaryString, 2, bytes(beneficiaryString).length);
+
+                willString = string(
+                    abi.encodePacked(
+                        willString,
+                        "- ", beneficiaryString, " -> ", Strings.toString(allocation), "%\n"
+                    )
+                );
+                
+                if (i < userWill.assetIds.length - 1) {
+                    willString = string(abi.encodePacked(willString, "\n"));
+                }
+            }
+
+            willString = string(abi.encodePacked(willString, "\n")); // space between assets
+        }
+
         return willString;
     }
     
