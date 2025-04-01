@@ -380,12 +380,12 @@ contract Will {
      * ASSET REGISTRY
     ****************************/ 
     // Todos: ensure certificationUrl is valid
-    function createAsset(address owner, string memory description, uint256 value, string memory certificationUrl, address[] memory beneficiaries, uint256[] memory allocations) public onlyWillOwner(owner) {
+    function createAsset(address owner, string memory description, uint256 value, string memory certificationUrl, address[] memory beneficiaries, uint256[] memory allocations) public onlyAuthorizedEditors(owner) onlyWillOwner(owner) {
         uint256 assetId = assetRegistry.createAsset(owner, description, value, certificationUrl, beneficiaries, allocations);
         wills[owner].assetIds.push(assetId);
     }
 
-    function viewAssetDescription(uint256 assetId) external view returns (string memory) {
+    function viewAssetDescription(address owner, uint256 assetId) external view onlyViewPermitted(owner) returns (string memory) {
         return assetRegistry.getAssetInfo(assetId);
     }
 
@@ -400,7 +400,7 @@ contract Will {
         }
     }
 
-    function updateAssetBeneficiariesAndAllocations(uint256 assetId, address[] memory newBeneficiaries, uint256[] memory newAllocations) external {
+    function updateAssetBeneficiariesAndAllocations(address owner, uint256 assetId, address[] memory newBeneficiaries, uint256[] memory newAllocations) onlyAuthorizedEditors(owner) onlyWillOwner(owner) external {
         assetRegistry.updateBeneficiariesAndAllocations(assetId, newBeneficiaries, newAllocations);
     }
 
