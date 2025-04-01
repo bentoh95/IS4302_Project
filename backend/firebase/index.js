@@ -118,7 +118,7 @@ async function startEventListener() {
   eventListener.on("DeathToday", async (event) => {
     console.log("Event Captured: ", event);
     const result = await govDeathSimulationService.getAllDeathNRICToday();
-
+    console.log(result)
     await sendProcessedDeathToday(result);
   });
 
@@ -154,24 +154,40 @@ async function sendProcessedData(processedValue) {
     gas: 300000,
   });
 
-  console.log("Processed data sent back to contract!");
+  console.log("Processed hello data sent back to contract!");
 }
 
 async function sendProcessedDeathToday(processedValue) {
   const accounts = await web3.eth.getAccounts();
   const contract = new web3.eth.Contract(contractABI, contractAddress);
+  console.log("sent address", accounts[0]);
 
   await contract.methods.updateWillStateToDeathConfirmed(processedValue).send({
     from: accounts[0], // Use the first account
     gas: 300000,
   });
 
-  console.log("Processed data sent back to contract!");
+  // await contract.methods
+  // .updateWillStateToGrantOfProbateConfirmed(processedValue)
+  // .send({
+  //   from: accounts[0], // Use the first account
+  //   gas: 300000,
+  // });
+
+  console.log("Process value:", processedValue);
+  console.log("State:", await contract.methods.getWillState(accounts[0]).call());
+  console.log("Processed Death data sent back to contract!");
 }
 
 async function sendProcessedProbateToday(processedValue) {
   const accounts = await web3.eth.getAccounts();
   const contract = new web3.eth.Contract(contractABI, contractAddress);
+  console.log("sent address", accounts[0])
+
+  await contract.methods.updateWillStateToGrantOfProbateConfirmed(processedValue).send({
+    from: accounts[0], // Use the first account
+    gas: 300000,
+  });
 
   await contract.methods
     .updateWillStateToGrantOfProbateConfirmed(processedValue)
@@ -180,7 +196,9 @@ async function sendProcessedProbateToday(processedValue) {
       gas: 300000,
     });
 
-  console.log("Processed data sent back to contract!");
+  console.log("Process value:", processedValue);
+  console.log("State:", await contract.methods.getWillState(accounts[0]).call());
+  console.log("Processed GOP data sent back to contract!");
 }
 
 // Call the async function

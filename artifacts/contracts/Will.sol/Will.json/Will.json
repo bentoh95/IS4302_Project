@@ -242,7 +242,6 @@
   {
     "inputs": [
       {
-
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
@@ -276,7 +275,6 @@
   {
     "inputs": [
       {
-
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -304,13 +302,11 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-
       },
       {
         "internalType": "string",
         "name": "nric",
         "type": "string"
-
       }
     ],
     "name": "createWill",
@@ -380,13 +376,11 @@
             "type": "address"
           },
           {
-
             "internalType": "string",
             "name": "nric",
             "type": "string"
           },
           {
-
             "internalType": "address[]",
             "name": "beneficiaries",
             "type": "address[]"
@@ -411,7 +405,6 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-
       }
     ],
     "name": "getWillState",
@@ -431,7 +424,6 @@
         "internalType": "address",
         "name": "owner",
         "type": "address"
-
       },
       {
         "internalType": "address",
@@ -593,7 +585,6 @@
   {
     "inputs": [
       {
-
         "internalType": "address",
         "name": "owner",
         "type": "address"
