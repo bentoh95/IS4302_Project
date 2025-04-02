@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+const EthereumEventProcessor = require("ethereum-event-processor");
+const Web3 = require("web3");
+const fs = require("fs");
 const govDeathSimulationRoutes = require("../routes/govDeathSimulationRoute.js");
 const express = require("express");
 const http = require("http");
@@ -7,8 +10,13 @@ const bodyParser = require("body-parser");
 //const cors = require("cors");
 const db = require("./firebaseAdmin.js"); // Correctly import the Firestore instance
 const op = require("./firestoreOperations.js");
+const { ethers } = require("ethers");
+const path = require("path");
 
 const truthy = ["TRUE", "true", "True", "1"];
+
+const govDeathSimulationService = require("../services/govDeathSimulationService.js");
+const grantOfProbateSimulationService = require("../services/grantOfProbateSimulationService.js");
 
 /*app.use(
   cors({
@@ -60,6 +68,143 @@ app.get("/test-firebase", async (req, res) => {
   }
 });
 
+console.log(process.env.CONTRACT_ABI_PATH);
+
+const web3ProviderUrl = process.env.PROVIDER_WEBSOCKET_URL;
+const contractAddress = process.env.CONTRACT_ADDRESS;
+
+const contractABIPath = path.resolve(
+  __dirname,
+  "../../solidity_project/artifacts/contracts/Will.sol/Will.json"
+);
+console.log(contractABIPath);
+const contractJSON = JSON.parse(fs.readFileSync(contractABIPath, "utf-8"));
+const contractABI = contractJSON.abi;
+console.log(contractABI); // Log to ensure it's correctly loaded
+
+const eventOptions = {
+  pollingInterval: parseInt(process.env.EVENT_POOL_INTERVAL),
+  startBlock: 0,
+  blocksToWait: parseInt(process.env.EVENT_BLOCKS_TO_WAIT),
+  blocksToRead: parseInt(process.env.EVENT_BLOCKS_TO_READ),
+};
+
+const web3 = new Web3(new Web3.providers.WebsocketProvider(web3ProviderUrl));
+
+async function startEventListener() {
+  const latestBlock = await web3.eth.getBlock("latest");
+  eventOptions.startBlock = latestBlock.number;
+
+  const eventListener = new EthereumEventProcessor(
+    web3,
+    contractAddress,
+    contractABI,
+    eventOptions
+  );
+
+  eventListener.on("Test", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Event Return Values: ", event.returnValues);
+
+    const value = "ma";
+    await sendProcessedData(value);
+  });
+
+  eventListener.on("DataReceived", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Event Return Values: ", event.returnValues);
+  });
+
+  eventListener.on("DeathToday", async (event) => {
+    console.log("Event Captured: ", event);
+    const result = await govDeathSimulationService.getAllDeathNRICToday();
+    console.log(result)
+    await sendProcessedDeathToday(result);
+  });
+
+  eventListener.on("GrantOfProbateToday", async (event) => {
+    console.log("Event Captured: ", event);
+    const result =
+      await grantOfProbateSimulationService.getAllGrantOfProbateNRICToday();
+
+    await sendProcessedProbateToday(result);
+  });
+
+  eventListener.on("DeathUpdated", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Successfully updated death");
+  });
+
+  eventListener.on("ProbateUpdated", async (event) => {
+    console.log("Event Captured: ", event);
+    console.log("Successfully updated probate");
+  });
+
+  eventListener.listen();
+
+  console.log("Event listener started");
+}
+
+async function sendProcessedData(processedValue) {
+  const accounts = await web3.eth.getAccounts();
+  const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+  await contract.methods.receiveProcessedData(processedValue).send({
+    from: accounts[0], // Use the first account
+    gas: 300000,
+  });
+
+  console.log("Processed hello data sent back to contract!");
+}
+
+async function sendProcessedDeathToday(processedValue) {
+  const accounts = await web3.eth.getAccounts();
+  const contract = new web3.eth.Contract(contractABI, contractAddress);
+  console.log("sent address", accounts[0]);
+
+  await contract.methods.updateWillStateToDeathConfirmed(processedValue).send({
+    from: accounts[0], // Use the first account
+    gas: 300000,
+  });
+
+  // await contract.methods
+  // .updateWillStateToGrantOfProbateConfirmed(processedValue)
+  // .send({
+  //   from: accounts[0], // Use the first account
+  //   gas: 300000,
+  // });
+
+  console.log("Process value:", processedValue);
+  console.log("State:", await contract.methods.getWillState(accounts[0]).call());
+  console.log("Processed Death data sent back to contract!");
+}
+
+async function sendProcessedProbateToday(processedValue) {
+  const accounts = await web3.eth.getAccounts();
+  const contract = new web3.eth.Contract(contractABI, contractAddress);
+  console.log("sent address", accounts[0])
+
+  await contract.methods.updateWillStateToGrantOfProbateConfirmed(processedValue).send({
+    from: accounts[0], // Use the first account
+    gas: 300000,
+  });
+
+  await contract.methods
+    .updateWillStateToGrantOfProbateConfirmed(processedValue)
+    .send({
+      from: accounts[0], // Use the first account
+      gas: 300000,
+    });
+
+  console.log("Process value:", processedValue);
+  console.log("State:", await contract.methods.getWillState(accounts[0]).call());
+  console.log("Processed GOP data sent back to contract!");
+}
+
+// Call the async function
+startEventListener();
+
+// triggerEvent();
 // Set up HTTP server
 const server = http.createServer(app);
 server.listen(3000, () => {

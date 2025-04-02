@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./willLib.sol";
+import "./WillTypes.sol";
 import "./AssetRegistry.sol";
+import "./WillUtils.sol";
 
 library WillFormat {
     // Helper function to get substring
@@ -19,7 +20,7 @@ library WillFormat {
     // Formatting function for will view
     function formatWillView(
         AssetRegistry assetRegistry,
-        WillLib.WillData storage userWill,
+        WillTypes.WillData storage userWill,
         mapping(address => mapping(address => uint256)) storage beneficiaryAllocPercentages
     ) internal view returns (string memory) {
         string memory willString = "=== DIGITAL ASSETS ===\nBeneficiaries & Allocations:\n";
@@ -101,7 +102,7 @@ library WillFormat {
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             address beneficiary = beneficiaries[i];
             uint256 allocationPercentage = beneficiaryAllocPercentages[owner][beneficiary];
-            uint256 amountToPay = WillLib.calculateAssetDistribution(totalAssets, allocationPercentage);
+            uint256 amountToPay = WillUtils.calculateAssetDistribution(totalAssets, allocationPercentage);
             
             if (amountToPay > 0) {
                 distributionDetails = string(

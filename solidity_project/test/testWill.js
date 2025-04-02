@@ -1,10 +1,12 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const { Web3 } = require("web3");
+
+const Web3 = require("web3");
 const fs = require("fs");
 require("dotenv").config();
 const path = require("path");
+const EthereumEventProcessor = require("ethereum-event-processor");
 
 const advanceTime = (web3, time) => {
   return new Promise((resolve, reject) => {
@@ -72,17 +74,26 @@ const getUnlockTime = async (web3) => {
   return unlockTime;
 };
 
-const web3ProviderUrl = process.env.PROVIDER_URL;
+const web3ProviderUrl = process.env.PROVIDER_WEBSOCKET_URL;
 const contractAddress = process.env.CONTRACT_ADDRESS;
-const contractABIPath = path.resolve(
-  __dirname,
-  "../artifacts/contracts/Will.sol/Will.json"
-);
+const contractABIPath = path.resolve(__dirname, process.env.CONTRACT_ABI_PATH);
 const contractJSON = JSON.parse(fs.readFileSync(contractABIPath, "utf-8"));
 const contractABI = contractJSON.abi;
 
-const web3 = new Web3(web3ProviderUrl);
+// const Web3 = require("web3");
+// const WebsocketProvider = require("web3-providers-ws"); // ADD THIS LINE
+// const web3 = new Web3(new WebsocketProvider(web3ProviderUrl));
+
+
+const web3 = new Web3(new Web3.providers.WebsocketProvider(web3ProviderUrl));
 const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+const eventOptions = {
+  pollingInterval: parseInt(process.env.EVENT_POOL_INTERVAL),
+  startBlock: 0,
+  blocksToWait: parseInt(process.env.EVENT_BLOCKS_TO_WAIT),
+  blocksToRead: parseInt(process.env.EVENT_BLOCKS_TO_READ),
+};
 
 describe("Will", function () {
   let Will;
@@ -129,7 +140,7 @@ describe("Will", function () {
   });
 
   it("Should create a will successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     const willData = await will.getWillData(owner.address);
     expect(willData.owner).to.equal(owner.address);
     expect(willData.beneficiaries).to.be.an("array").that.is.empty;
@@ -152,7 +163,7 @@ describe("Will", function () {
   }); */
 
   it("Should allow owner to set residual beneficiary", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -163,7 +174,7 @@ describe("Will", function () {
 
   it("Should prevent adding beneficiaries before setting residual beneficiary", async function () {
     // Create will without setting residual beneficiary
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
 
     // Attempt to add beneficiaries should revert
     const beneficiaries = [beneficiary1.address, beneficiary2.address];
@@ -175,7 +186,7 @@ describe("Will", function () {
   });
 
   it("Should add beneficiaries successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -199,7 +210,7 @@ describe("Will", function () {
   });
 
   it("Should add to residual beneficiary successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -227,7 +238,7 @@ describe("Will", function () {
   });
 
   it("Should add to existing residual beneficiary successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(owner.address, beneficiary2.address);
     // Add multiple beneficiaries with their allocations
     const beneficiaries = [beneficiary1.address, beneficiary2.address];
@@ -251,7 +262,7 @@ describe("Will", function () {
   });
 
   it("Should not exceed 100% after adding beneficiary", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(owner.address, beneficiary2.address);
     // Add multiple beneficiaries with their allocations
     const beneficiaries = [beneficiary1.address, beneficiary2.address];
@@ -274,7 +285,7 @@ describe("Will", function () {
 
   it("Should update the allocation for a beneficiary successfully", async function () {
     // Create a will for the owner
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -314,7 +325,7 @@ describe("Will", function () {
 
   it("Should update the allocation for a beneficiary and give remaining to new residual", async function () {
     // Create a will for the owner
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -359,7 +370,7 @@ describe("Will", function () {
 
   it("Should update the allocation for a beneficiary and give remaining to existing residual", async function () {
     // Create a will for the owner
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -404,7 +415,7 @@ describe("Will", function () {
 
   it("Should not update the allocation for a beneficiary if it exceeds 100 (w/o residual)", async function () {
     // Create a will for the owner
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -433,7 +444,7 @@ describe("Will", function () {
 
   it("Should not update the allocation for a beneficiary if it exceeds 100", async function () {
     // Create a will for the owner
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -473,7 +484,7 @@ describe("Will", function () {
 
   it("Should revert if removing residual beneficiary", async function () {
     // Create the will and set the residual beneficiary
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -492,7 +503,7 @@ describe("Will", function () {
   });
 
   it("Should remove beneficiary and new residuary gets remaining", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -538,7 +549,7 @@ describe("Will", function () {
   });
 
   it("Should remove beneficiary and existing residuary gets remaining", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -575,7 +586,7 @@ describe("Will", function () {
   });
 
   it("Should fund will successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -589,7 +600,7 @@ describe("Will", function () {
   it("Should distribute assets correctly and make payments", async function () {
     console.log("=== Starting distributeAssets test ===");
     // Create will
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -712,7 +723,7 @@ describe("Will", function () {
   it("Should return correct will details", async function () {
     console.log("=== Starting Should return correct will details test ===");
 
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -766,7 +777,7 @@ Value: ${assetValue}
   });
 
   it("Should add an editor successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -780,7 +791,7 @@ Value: ${assetValue}
   });
 
   it("Should remove an editor successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -795,7 +806,7 @@ Value: ${assetValue}
   });
 
   it("Should revert if adding the same editor twice", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -807,7 +818,7 @@ Value: ${assetValue}
   });
 
   it("Should revert if trying to remove an editor who does not exist", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -818,7 +829,7 @@ Value: ${assetValue}
   });
 
   it("Should revert if a non-owner tries to remove an editor", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -830,7 +841,7 @@ Value: ${assetValue}
   });
 
   it("Should revert if adding invalid editor address", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     const zeroAddress = ethers.ZeroAddress;
     await expect(will.addEditor(owner.address, zeroAddress)).to.be.revertedWith(
       "Invalid editor address"
@@ -838,7 +849,7 @@ Value: ${assetValue}
   });
 
   it("Should not allow unauthorised editor to add beneficiaries", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -854,7 +865,7 @@ Value: ${assetValue}
   });
 
   it("Should allow authorised editor to add beneficiaries", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -878,7 +889,7 @@ Value: ${assetValue}
   });
 
   it("Should not allow unauthorised editor to remove beneficiaries", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -900,7 +911,7 @@ Value: ${assetValue}
   });
 
   it("Should allow authorised editor to remove beneficiaries", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -935,7 +946,7 @@ Value: ${assetValue}
   });
 
   it("Should not allow unauthorised editor to update allocations", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -957,7 +968,7 @@ Value: ${assetValue}
   });
 
   it("Should allow authorised editor to update allocations", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -987,7 +998,7 @@ Value: ${assetValue}
   });
 
   it("Should add a viewer successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.addViewer(owner.address, viewer1.address);
     const viewerExists = await will.isAuthorisedViewer(
       owner.address,
@@ -997,7 +1008,7 @@ Value: ${assetValue}
   });
 
   it("Should remove a viewer successfully", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.addViewer(owner.address, viewer1.address);
     await will.removeViewer(owner.address, viewer1.address);
     const viewerExists = await will.isAuthorisedViewer(
@@ -1008,7 +1019,7 @@ Value: ${assetValue}
   });
 
   it("Should revert if adding the same viewer twice", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.addViewer(owner.address, viewer1.address);
     await expect(
       will.addViewer(owner.address, viewer1.address)
@@ -1016,14 +1027,14 @@ Value: ${assetValue}
   });
 
   it("Should revert if trying to remove an viewer who does not exist", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await expect(
       will.removeViewer(owner.address, viewer1.address)
     ).to.be.revertedWith("Viewer not found");
   });
 
   it("Should allow the viewer with permission to call WillViewForBeneficiaries if will is InCreation (owner check)", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
       residualBeneficiary1.address
@@ -1046,28 +1057,264 @@ Value: ${assetValue}
   });
 
   it("Should not allow the viewer without permission to call WillViewForBeneficiaries if will is InCreation (owner check)", async function () {
-    await will.createWill(owner.address);
+    await will.createWill(owner.address, "S7654321B");
     await expect(
       will.connect(viewer2).WillViewForBeneficiaries(owner.address)
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
-  it("test", async function () {
-    const unlockTime = await getUnlockTime(web3);
+  // it("test", async function () {
+  //   const unlockTime = await getUnlockTime(web3);
 
+  //   await advanceTime(web3, unlockTime);
+  //   await disableAutomine(web3);
+  //   await setMiningInterval(web3, 5000);
+
+  //   const accounts = await web3.eth.getAccounts();
+
+  //   const tx = await contract.methods
+  //     .emitTestEvent()
+  //     .send({ from: accounts[0] });
+
+  //   console.log(tx);
+
+  //   const latestBlock = await web3.eth.getBlock("latest");
+  //   eventOptions.startBlock = latestBlock.number;
+
+  //   const eventPromise = new Promise((resolve, reject) => {
+  //     const eventListener = new EthereumEventProcessor(
+  //       web3,
+  //       contractAddress,
+  //       contractABI,
+  //       eventOptions
+  //     );
+
+  //     // Listen for the DataReceived event
+  //     eventListener.on("DataReceived", (event) => {
+  //       console.log("Event received:", event.returnValues);
+  //       resolve(event); // Resolve the promise when the event is captured
+  //     });
+
+  //     // Start listening for the event
+  //     eventListener.listen();
+  //   });
+
+  //   // Set a timeout for 1 minute
+  //   const timeoutPromise = new Promise((_, reject) =>
+  //     setTimeout(
+  //       () =>
+  //         reject(new Error("Timeout: DataReceived event not received in time")),
+  //       60000
+  //     )
+  //   );
+
+  //   // Wait for either the event or the timeout (whichever happens first)
+  //   try {
+  //     const event = await Promise.race([eventPromise, timeoutPromise]);
+  //     console.log("Event successfully received:", event);
+  //   } catch (error) {
+  //     console.error("Error or timeout:", error.message);
+  //   }
+  // });
+
+  // Test confirmDeath and GrantofProbateConfirmed state update
+  it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
+    this.timeout(60000);
+    const accounts = await web3.eth.getAccounts();
+
+    try {
+      const willData = await contract.methods.getWillData(accounts[1]).call();
+      // Check if will exists
+      if (willData.owner === "0x0000000000000000000000000000000000000000") {
+        await contract.methods.createWill(accounts[1], "S1234567A").send({
+          from: accounts[0],
+          gas: 1000000,
+        });
+        console.log("✅ Will created accounts[1], S1234567A");
+      } else {
+        console.log("⚠️ Will already exists for this address");
+      }
+    } catch (error) {
+      console.error("❌ Error checking or creating will:", error);
+    }
+
+    try {
+      const willData = await contract.methods.getWillData(accounts[0]).call();
+      // Check if will exists
+      if (willData.owner === "0x0000000000000000000000000000000000000000") {
+        await contract.methods.createWill(accounts[0], "S7654321B").send({
+          from: accounts[0],
+          gas: 1000000,
+        });
+        console.log("✅ Will created accounts[0], S7654321B");
+      } else {
+        console.log("⚠️ Will already exists for this address");
+      }
+    } catch (error) {
+      console.error("❌ Error checking or creating will:", error);
+    }
+
+    const unlockTime = await getUnlockTime(web3);
     await advanceTime(web3, unlockTime);
     await disableAutomine(web3);
     await setMiningInterval(web3, 5000);
 
-    const accounts = await web3.eth.getAccounts();
-    /* 
-    const deployedContract = await Contract.deploy().send({ from: accounts[0] });
-    console.log("Contract deployed at:", deployedContract.options.address);
-    */
-    //  const tx = await deployedContract.methods
     const tx = await contract.methods
-      .emitTestEvent()
-      .send({ from: accounts[0] });
-    console.log(tx);
+      .callDeathRegistryToday()
+      .send({ from: accounts[1] });
+
+    // console.log(tx);
+
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
+
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
+
+      // Listen for the DataReceived event
+      eventListener.on("DeathUpdated", (event) => {
+        // console.log("Event received:", event.returnValues);
+        console.log("Event received");
+        resolve(event); // Resolve the promise when the event is captured
+      });
+
+      // Start listening for the event
+      eventListener.listen();
+    });
+
+    // Set a timeout for 1 minute
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
+
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise, timeoutPromise]);
+      // console.log("Event successfully received:", event);
+      console.log("Event successfully received");
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
+    expect(await contract.methods.getWillState(accounts[1]).call()).to.equal("InCreation");
   });
+
+  // Test confirmDeath and GrantofProbateConfirmed state update
+  it("Should change will state to confirmDeath when we call government death registry and the corresponding NRIC has been posted", async function () {
+    this.timeout(60000);
+    const accounts = await web3.eth.getAccounts();
+
+    const unlockTime = await getUnlockTime(web3);
+    await advanceTime(web3, unlockTime);
+    await disableAutomine(web3);
+    await setMiningInterval(web3, 5000);
+
+    const tx = await contract.methods
+      .callDeathRegistryToday()
+      .send({ from: accounts[0] });
+
+    // console.log(tx);
+
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
+
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
+
+      // Listen for the DataReceived event
+      eventListener.on("DeathUpdated", (event) => {
+        // console.log("Event received:", event.returnValues);
+        console.log("Event received");
+        resolve(event); // Resolve the promise when the event is captured
+      });
+
+      // Start listening for the event
+      eventListener.listen();
+    });
+
+    // Set a timeout for 1 minute
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
+
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise, timeoutPromise]);
+      // console.log("Event successfully received:", event);
+      console.log("Event successfully received");
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
+    expect(await contract.methods.getWillState(accounts[0]).call()).to.equal("DeathConfirmed");
+  });
+
+  it("Should change will state to GrantOfProbateConfirmed when state is in confirmDeath and the corresponding NRIC has been posted to the government Grant of Probate registry", async function () {
+    this.timeout(60000);
+    const accounts = await web3.eth.getAccounts();
+
+    const unlockTime = await getUnlockTime(web3);
+    await advanceTime(web3, unlockTime);
+    await disableAutomine(web3);
+    await setMiningInterval(web3, 5000);
+      const tx2 = await contract.methods
+        .callGrantOfProbateToday()
+        .send({ from: accounts[0] });
+  
+      // console.log(tx2);
+  
+      const eventPromise2 = new Promise((resolve, reject) => {
+        const eventListener = new EthereumEventProcessor(
+          web3,
+          contractAddress,
+          contractABI,
+          eventOptions
+        );
+  
+        // Listen for the DataReceived event
+        eventListener.on("ProbateUpdated", (event) => {
+          // console.log("Event received:", event.returnValues);
+          console.log("Event received");
+          resolve(event); // Resolve the promise when the event is captured
+        });
+  
+        // Start listening for the event
+        eventListener.listen();
+      });
+  
+      // Set a timeout for 1 minute
+      const timeoutPromise2 = new Promise((_, reject) =>
+        setTimeout(
+          () =>
+            reject(new Error("Timeout: DataReceived event not received in time")),
+          60000
+        )
+      );
+  
+      // Wait for either the event or the timeout (whichever happens first)
+      try {
+        const event = await Promise.race([eventPromise2, timeoutPromise2]);
+        // console.log("Event successfully received:", event);
+        console.log("Event successfully received");
+      } catch (error) {
+        console.error("Error or timeout:", error.message);
+      }
+      expect(await contract.methods.getWillState(accounts[0]).call()).to.equal("GrantOfProbateConfirmed");
+    });
 });

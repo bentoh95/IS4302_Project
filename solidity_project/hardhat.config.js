@@ -1,27 +1,23 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require("hardhat-abi-exporter");
+require("dotenv").config();
 
 module.exports = {
   abiExporter: {
-    path: "artifacts/abis",
+    path: process.env.CONTRACT_ABI_PATH,
     runOnCompile: true,
     clear: true,
     flat: true,
     spacing: 2,
   },
-  solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200, // Number of runs the optimizer should try for
-      },
-    },
-  },
+  solidity: "0.8.28",
   networks: {
     dev: {
-      url: process.env.PROVIDER_URL || "http://127.0.0.1:8545", // Ensure default value
+      url: process.env.PROVIDER_URL,
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545",
     },
   },
 };
