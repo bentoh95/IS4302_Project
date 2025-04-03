@@ -1,54 +1,44 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import "@openzeppelin/contracts/utils/Strings.sol";
+
+import "./willLib.sol";
+import "./willFormat.sol";
+import "./AssetRegistry.sol";
 import "hardhat/console.sol";
 
 contract Will {
-    enum WillState {
-        InCreation,
-        InExecution,
-        DeathConfirmed,
-        GrantOfProbateConfirmed,
-        Closed
-    }
-
-    event Test(string message);
-    event DataReceived(string newValue);
-
-    event DeathUpdated(string value);
-    event ProbateUpdated(string value);
-
-    struct WillData {
-        address owner;
-        string nric;
-        address[] beneficiaries;
-        WillState state;
-    }
-
+    AssetRegistry public assetRegistry;
+    using WillLib for WillLib.WillData;
+    using WillLib for address[];
     string storedValue;
-
-    mapping(address => WillData) private wills;
-    mapping(address => mapping(address => uint256)) private beneficiaryAlloc;
+    
+    constructor(address _assetRegistryAddress) {
+        require(_assetRegistryAddress != address(0), "Invalid address");
+        assetRegistry = AssetRegistry(_assetRegistryAddress);
+    }
+    
+    mapping(address => WillLib.WillData) private wills;
+    mapping(address => mapping(address => uint256)) private beneficiaryAllocPercentages;
     mapping(address => mapping(address => bool)) private authorizedEditors; //willOwner address to editor address to F/T
     mapping(address => mapping(address => bool)) private authorizedViewers; // mapping of who has the permission to view will
-    //Keep track of will owners as we cannot loop through wills mapping
+//  mapping(address => mapping(address => Role)) private authorizedUsers; // mapping for both viewers and editors
     address[] public allWillOwners;
-
+    
+    event Test(string message);
     event WillCreated(address indexed owner);
-    event BeneficiaryAdded(
-        address indexed owner,
-        address beneficiary,
-        uint256 allocation
-    );
+    event BeneficiaryAdded(address indexed owner, address beneficiary, uint256 allocationPercentage);
     event BeneficiaryRemoved(address indexed owner, address beneficiary);
-    event AllocationUpdated(
-        address indexed owner,
-        address beneficiary,
-        uint256 allocation
-    );
+    event AllocationPercentageUpdated(address indexed owner, address beneficiary, uint256 allocationPercentage);
+    event AssetsDistributed(address indexed owner, uint256 totalDistributed, uint256 remainingAssets);
+    event WillFunded(address indexed owner, uint256 amount);
+    event DeathUpdated(string value);
+    event ProbateUpdated(string value);
+    event DataReceived(string newValue);
     event DeathToday();
     event GrantOfProbateToday();
-
+    
     /* 
     -------------------
         CALLING DATABASES
@@ -66,49 +56,52 @@ contract Will {
         // data comes in from event listeners in format of S7654321B,S7654321A, S7654321C etc
         emit GrantOfProbateToday();
     }
-
+    
     /* 
     -------------------
         PERMISSIONS
     -------------------
     */
-    modifier onlyOwner(address owner) {
+    modifier onlyWillOwner(address owner) {
         require(wills[owner].owner == msg.sender, "Not the owner");
         _;
     }
 
-    modifier onlyAuthorizedEditors(address owner) {
+    modifier onlyAuthorizedEditors (address owner) {
         require(
-            wills[owner].owner == msg.sender ||
-                authorizedEditors[owner][msg.sender],
+            wills[owner].owner == msg.sender || authorizedEditors[owner][msg.sender],
             "Not authorized"
         );
         _;
-    }
+    } 
 
+    modifier residualBeneficiaryExists(address owner) {
+        require(wills[owner].residualBeneficiary != address(0), "Residual beneficiary not set");
+        _;
+    }
+        
     modifier onlyViewPermitted(address owner) {
-        WillData storage userWill = wills[owner];
+        WillLib.WillData storage userWill = wills[owner];
         require(userWill.owner != address(0), "Will does not exist");
 
         // Before death scenario
-        if (userWill.state == WillState.InCreation) {
+        if (userWill.state == WillLib.WillState.InCreation) {
             // Only the owner or an explicitly authorizedViewer can view
             require(
-                msg.sender == userWill.owner ||
-                    authorizedViewers[owner][msg.sender],
+                msg.sender == userWill.owner || authorizedViewers[owner][msg.sender],
                 "Not authorized to view this will (InCreation)"
             );
-        }
+        } 
         // After death scenario
-        else {
+        else { 
             // EITHER an explicitly authorizedViewer, OR a real beneficiary with nonzero allocation
             bool isBeneficiary = false;
             address[] memory beneficiaries = userWill.beneficiaries;
 
             for (uint256 i = 0; i < beneficiaries.length; i++) {
                 if (
-                    beneficiaries[i] == msg.sender &&
-                    beneficiaryAlloc[owner][msg.sender] > 0
+                    beneficiaries[i] == msg.sender && 
+                    beneficiaryAllocPercentages[owner][msg.sender] > 0
                 ) {
                     isBeneficiary = true;
                     break;
@@ -137,20 +130,20 @@ contract Will {
         string memory deathRegistryNrics
     ) public {
         console.log(deathRegistryNrics);
-        string[] memory nrics = splitString(deathRegistryNrics, ",");
+        string[] memory nrics = WillFormat.splitString(deathRegistryNrics, ",");
         // Loop through all NRICs
         for (uint256 i = 0; i < nrics.length; i++) {
             string memory currentNric = nrics[i];
             for (uint256 j = 0; j < allWillOwners.length; j++) {
                 address owner = allWillOwners[j];
-                WillData storage willData = wills[owner];
+                WillLib.WillData storage willData = wills[owner];
                 if (
                     keccak256(bytes(willData.nric)) ==
                     keccak256(bytes(currentNric)) &&
-                    (willData.state == WillState.InCreation ||
-                        willData.state == WillState.InExecution)
+                    (willData.state == WillLib.WillState.InCreation ||
+                        willData.state == WillLib.WillState.InExecution)
                 ) {
-                    willData.state = WillState.DeathConfirmed;
+                    willData.state = WillLib.WillState.DeathConfirmed;
                 }
             }
         }
@@ -161,19 +154,19 @@ contract Will {
     function updateWillStateToGrantOfProbateConfirmed(
         string memory grantOfProbateNrics
     ) public {
-        string[] memory nrics = splitString(grantOfProbateNrics, ",");
+        string[] memory nrics = WillFormat.splitString(grantOfProbateNrics, ",");
         // Loop through all NRICs
         for (uint256 i = 0; i < nrics.length; i++) {
             string memory currentNric = nrics[i];
             for (uint256 j = 0; j < allWillOwners.length; j++) {
                 address owner = allWillOwners[j];
-                WillData storage willData = wills[owner];
+                WillLib.WillData storage willData = wills[owner];
                 if (
                     keccak256(bytes(willData.nric)) ==
                     keccak256(bytes(currentNric)) &&
-                    (willData.state == WillState.DeathConfirmed)
+                    (willData.state == WillLib.WillState.DeathConfirmed)
                 ) {
-                    willData.state = WillState.GrantOfProbateConfirmed;
+                    willData.state = WillLib.WillState.GrantOfProbateConfirmed;
                 }
             }
         }
@@ -196,12 +189,16 @@ contract Will {
 
         // Initialize empty array with proper syntax
         address[] memory emptyArray = new address[](0);
-
-        wills[owner] = WillData({
+        uint256[] memory emptyArray2 = new uint256[](0);
+        
+        wills[owner] = WillLib.WillData({
             owner: owner,
             nric: nric,
             beneficiaries: emptyArray,
-            state: WillState.InCreation
+            digitalAssets: 0,
+            state: WillLib.WillState.InCreation,
+            residualBeneficiary: address(0),
+            assetIds: emptyArray2
         });
 
         allWillOwners.push(owner);
@@ -209,287 +206,287 @@ contract Will {
         emit WillCreated(owner);
     }
 
-    function addBeneficiary(
-        address owner,
-        address beneficiary,
-        uint256 allocation
-    ) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
-        require(allocation > 0, "Need to allocate more than 0");
-        require(
-            beneficiaryAlloc[owner][beneficiary] == 0,
-            "Allocation already exists"
-        );
-
-        beneficiaryAlloc[owner][beneficiary] = allocation;
-        wills[owner].beneficiaries.push(beneficiary);
-
-        emit BeneficiaryAdded(owner, beneficiary, allocation);
+    // Helper function for updating one beneficiary's allocation percentage.
+    function updateOneAllocationPercentage(address owner, address beneficiary, uint256 allocationPercentage) public onlyAuthorizedEditors(owner) {
+        require(allocationPercentage > 0, "Allocation percentage must be greater than 0"); // Cannot update someone's allocation to 0
+        require(wills[owner].owner != address(0), "Will does not exist");
+        
+        beneficiaryAllocPercentages[owner][beneficiary] = allocationPercentage;
+        emit AllocationPercentageUpdated(owner, beneficiary, allocationPercentage);
     }
 
-    function removeBeneficiary(
-        address owner,
-        address beneficiary
-    ) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
-        require(
-            beneficiaryAlloc[owner][beneficiary] != 0,
-            "Allocation does not exist"
-        );
+    // Update multiple beneficiaries' allocation percentages
+    function updateAllocations(address owner, address[] memory beneficiariesToUpdate, uint256[] memory newPercentages) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner){
+        require(beneficiariesToUpdate.length == newPercentages.length, "Mismatched input arrays");
 
-        delete beneficiaryAlloc[owner][beneficiary];
+        uint256 oldTotal = 0;
+        address[] memory allBeneficiaries = wills[owner].beneficiaries;
+        address residualBeneficiary = wills[owner].residualBeneficiary; 
 
-        // Remove from the beneficiaries array
-        uint256 len = wills[owner].beneficiaries.length;
-        for (uint256 i = 0; i < len; i++) {
-            if (wills[owner].beneficiaries[i] == beneficiary) {
-                wills[owner].beneficiaries[i] = wills[owner].beneficiaries[
-                    len - 1
-                ];
-                wills[owner].beneficiaries.pop();
-                break;
+        // Calculate the current sum of allocation percentages
+        for (uint256 i = 0; i < allBeneficiaries.length; i++) {
+            oldTotal += beneficiaryAllocPercentages[owner][allBeneficiaries[i]];
+        }
+
+        // Calculate the expected sum of allocation percentages after updating
+        uint256 newTotal = oldTotal;
+        for (uint256 i = 0; i < beneficiariesToUpdate.length; i++) {
+            address beneficiary = beneficiariesToUpdate[i];
+            newTotal = newTotal - beneficiaryAllocPercentages[owner][beneficiary] + newPercentages[i]; // Replace all the allocation percentages that need to be updated
+        }
+        
+        require(newTotal <= 100, "Total allocation exceeds 100%");
+
+        for (uint256 i = 0; i < beneficiariesToUpdate.length; i++) {
+            beneficiaryAllocPercentages[owner][beneficiariesToUpdate[i]] = newPercentages[i];
+            emit AllocationPercentageUpdated(owner, beneficiariesToUpdate[i], newPercentages[i]);
+        }
+
+        // Assign leftover percentage to residual beneficiary
+        uint256 remainingPercentage = WillLib.calculateRemainingPercentage(newTotal);
+        if (remainingPercentage > 0) {
+            if (beneficiaryAllocPercentages[owner][residualBeneficiary] == 0) {
+                wills[owner].beneficiaries.push(residualBeneficiary); // Add residual beneficiary if not present
+                beneficiaryAllocPercentages[owner][residualBeneficiary] = remainingPercentage;
+                emit AllocationPercentageUpdated(owner, residualBeneficiary, remainingPercentage);
+            }
+            else {
+                beneficiaryAllocPercentages[owner][residualBeneficiary] += remainingPercentage;
+                emit BeneficiaryAdded(owner, residualBeneficiary, remainingPercentage);
             }
         }
+    } 
 
-        emit BeneficiaryRemoved(owner, beneficiary);
+    function addBeneficiaries(address owner, address[] memory newBeneficiaries, uint256[] memory newPercentages) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) {
+        require(newBeneficiaries.length == newPercentages.length, "Mismatched input arrays");
+
+        uint256 oldTotal = 0;
+        address[] memory allBeneficiaries = wills[owner].beneficiaries;
+        address residualBeneficiary = wills[owner].residualBeneficiary; 
+
+        // Calculate the current total allocation
+        for (uint256 i = 0; i < allBeneficiaries.length; i++) {
+            oldTotal += beneficiaryAllocPercentages[owner][allBeneficiaries[i]];
+        }
+
+        uint256 newTotal = oldTotal;
+        for (uint256 i = 0; i < newBeneficiaries.length; i++) {
+            require(newPercentages[i] > 0, "Allocation must be greater than 0");
+            if (beneficiaryAllocPercentages[owner][newBeneficiaries[i]] == 0) {
+                wills[owner].beneficiaries.push(newBeneficiaries[i]); // Add them to beneficiaries[] if new
+            }
+            // Add new allocations
+            
+            newTotal += newPercentages[i];
+        }
+        
+        // Update the allocations in the mapping
+        for (uint256 i = 0; i < newBeneficiaries.length; i++) {
+            beneficiaryAllocPercentages[owner][newBeneficiaries[i]] = newPercentages[i];
+            emit BeneficiaryAdded(owner, newBeneficiaries[i], newPercentages[i]);
+        }
+
+        require(newTotal <= 100, "Total allocation exceeds 100%");
+
+        // Calculate the remaining percentage for the residual beneficiary
+        uint256 remainingPercentage = WillLib.calculateRemainingPercentage(newTotal);
+
+        // If the total allocation is less than 100%, assign the remaining percentage to the residual beneficiary
+        if (remainingPercentage > 0) {
+            // Add the residual beneficiary to the list if not already present
+            if (beneficiaryAllocPercentages[owner][residualBeneficiary] == 0) {
+                wills[owner].beneficiaries.push(residualBeneficiary);
+                beneficiaryAllocPercentages[owner][residualBeneficiary] = remainingPercentage;
+                emit BeneficiaryAdded(owner, residualBeneficiary, remainingPercentage);
+            }
+            else {
+                beneficiaryAllocPercentages[owner][residualBeneficiary] += remainingPercentage;
+                emit BeneficiaryAdded(owner, residualBeneficiary, remainingPercentage);
+            }
+        }
     }
 
-    function updateAllocation(
-        address owner,
-        address beneficiary,
-        uint256 allocation
-    ) public onlyOwner(owner) onlyAuthorizedEditors(owner) {
-        require(allocation > 0, "Need to allocate more than 0");
-        require(
-            beneficiaryAlloc[owner][beneficiary] != 0,
-            "Allocation does not exist"
+    function removeBeneficiaries(address owner, address[] memory beneficiariesToRemove) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) {
+        address residualBeneficiary = wills[owner].residualBeneficiary; 
+
+        // Check if any of the beneficiaries to be removed is the residual beneficiary
+        for (uint256 i = 0; i < beneficiariesToRemove.length; i++) {
+            address beneficiary = beneficiariesToRemove[i];
+            require(beneficiary != residualBeneficiary, "Cannot remove the residual beneficiary");
+        }
+        
+        for (uint256 i = 0; i < beneficiariesToRemove.length; i++) {
+            address beneficiary = beneficiariesToRemove[i];
+            require(beneficiaryAllocPercentages[owner][beneficiary] != 0, "Beneficiary does not exist");
+            delete beneficiaryAllocPercentages[owner][beneficiary];
+            
+            // Use the library function to remove beneficiary from array
+            WillLib.removeBeneficiaryFromArray(wills[owner].beneficiaries, beneficiary);
+            emit BeneficiaryRemoved(owner, beneficiary);
+        }
+
+        // Recalculate total allocation
+        uint256 newTotal = 0;
+        address[] memory remainingBeneficiaries = wills[owner].beneficiaries;
+        for (uint256 i = 0; i < remainingBeneficiaries.length; i++) {
+            newTotal += beneficiaryAllocPercentages[owner][remainingBeneficiaries[i]];
+        }
+
+        // Assign leftover allocation to residual beneficiary
+        uint256 remainingPercentage = WillLib.calculateRemainingPercentage(newTotal);
+        if (remainingPercentage > 0) {
+            // Add residual beneficiary to list if not already present
+            if (beneficiaryAllocPercentages[owner][residualBeneficiary] == 0) {
+                wills[owner].beneficiaries.push(residualBeneficiary);
+                beneficiaryAllocPercentages[owner][residualBeneficiary] = remainingPercentage;
+                emit BeneficiaryAdded(owner, residualBeneficiary, remainingPercentage);
+            }
+            else {
+                beneficiaryAllocPercentages[owner][residualBeneficiary] += remainingPercentage;
+                emit BeneficiaryAdded(owner, residualBeneficiary, remainingPercentage);
+            }
+        }
+    }
+
+    // Function to add digital assets to the will
+    function fundWill(address owner) external payable onlyWillOwner(owner) {
+        require(msg.value > 0, "Must send ETH");
+        wills[owner].digitalAssets += msg.value;
+        emit WillFunded(owner, msg.value);
+    }
+
+    function distributeAssets(address owner) external returns (string memory) {
+        WillLib.WillData storage userWill = wills[owner];        
+        address[] memory beneficiaries = userWill.beneficiaries;
+        require(userWill.digitalAssets > 0, "No assets to distribute");
+        
+        uint256 totalDistributed = 0;
+        uint256 remainingAssets = userWill.digitalAssets;
+        string memory distributionDetails = "Asset Distribution Details:\n";
+
+        // Loop through array of beneficiaries, calculate amount to pay based on allocationPercentage and transfer the amount
+        for (uint256 i = 0; i < beneficiaries.length; i++) {
+            address beneficiary = beneficiaries[i];
+            uint256 allocationPercentage = beneficiaryAllocPercentages[owner][beneficiary];
+            uint256 amountToPay = WillLib.calculateAssetDistribution(userWill.digitalAssets, allocationPercentage);
+            
+            if (amountToPay > 0) {
+                totalDistributed += amountToPay;
+                remainingAssets -= amountToPay;
+                payable(beneficiary).transfer(amountToPay);
+            }
+        }
+        
+        // Generate distribution details using the utility function
+        distributionDetails = WillFormat.formatDistributionDetails(
+            beneficiaries, 
+            beneficiaryAllocPercentages, 
+            owner, 
+            userWill.digitalAssets, 
+            remainingAssets
         );
-
-        beneficiaryAlloc[owner][beneficiary] = allocation;
-
-        emit AllocationUpdated(owner, beneficiary, allocation);
+        
+        // Update remaining assets in the will
+        userWill.digitalAssets = remainingAssets;
+        emit AssetsDistributed(owner, totalDistributed, remainingAssets);
+        
+        // Return the distribution details string
+        return distributionDetails;
     }
 
-    function viewWill(
-        address owner
-    )
-        public
-        view
-        onlyOwner(owner)
-        onlyAuthorizedEditors(owner)
-        returns (string memory)
-    {
+    function viewWill(address owner) public onlyWillOwner(owner) onlyAuthorizedEditors(owner) view returns (string memory) {
         require(wills[owner].owner != address(0), "Will does not exist");
-
-        WillData storage userWill = wills[owner];
-        string memory willString = "Beneficiaries & Allocations:\n";
-        uint256 numBeneficiaries = userWill.beneficiaries.length;
-
-        for (uint256 i = 0; i < numBeneficiaries; i++) {
-            address beneficiary = userWill.beneficiaries[i];
-            uint256 allocation = beneficiaryAlloc[owner][beneficiary];
-
-            // Convert address to full hex string WITHOUT "0x" prefix to match test expectations
-            string memory beneficiaryString = Strings.toHexString(
-                uint256(uint160(beneficiary)),
-                20
-            );
-            // Remove "0x" prefix to match test expectations (which removes the prefix)
-            beneficiaryString = substring(
-                beneficiaryString,
-                2,
-                bytes(beneficiaryString).length
-            );
-
-            string memory allocationString = Strings.toString(allocation);
-
-            willString = string(
-                abi.encodePacked(
-                    willString,
-                    "- ",
-                    beneficiaryString,
-                    " -> ",
-                    allocationString,
-                    "\n"
-                )
-            );
-        }
-
-        // emit WillViewed(owner);
-
-        return willString;
+        return WillFormat.formatWillView(assetRegistry, wills[owner], beneficiaryAllocPercentages);
     }
 
-    // Copied same viewWill function to another function for more customisability
-    function WillViewForBeneficiaries(
-        address owner
-    ) public view onlyViewPermitted(owner) returns (string memory) {
-        WillData storage userWill = wills[owner];
-        string memory willString = "Beneficiaries & Allocations:\n";
-        uint256 numBeneficiaries = userWill.beneficiaries.length;
-
-        for (uint256 i = 0; i < numBeneficiaries; i++) {
-            address beneficiary = userWill.beneficiaries[i];
-            uint256 allocation = beneficiaryAlloc[owner][beneficiary];
-
-            string memory beneficiaryString = Strings.toHexString(
-                uint256(uint160(beneficiary)),
-                20
-            );
-            beneficiaryString = substring(
-                beneficiaryString,
-                2,
-                bytes(beneficiaryString).length
-            );
-
-            string memory allocationString = Strings.toString(allocation);
-
-            willString = string(
-                abi.encodePacked(
-                    willString,
-                    "- ",
-                    beneficiaryString,
-                    " -> ",
-                    allocationString,
-                    "\n"
-                )
-            );
-        }
-
-        return willString;
+    // View function for beneficiaries
+    function WillViewForBeneficiaries(address owner) public view onlyViewPermitted(owner) returns (string memory) {
+        // Use the same formatting function but without the digital assets section
+        return WillFormat.formatWillView(assetRegistry, wills[owner], beneficiaryAllocPercentages);
     }
 
-    function addEditor(address owner, address editor) public onlyOwner(owner) {
+    function addEditor(address owner, address editor) public onlyWillOwner(owner) {
         require(editor != address(0), "Invalid editor address");
         require(!authorizedEditors[owner][editor], "Editor already exists");
         authorizedEditors[owner][editor] = true;
     }
 
-    function removeEditor(
-        address owner,
-        address editor
-    ) public onlyOwner(owner) {
+    function removeEditor(address owner, address editor) public onlyWillOwner(owner) {
         require(authorizedEditors[owner][editor], "Editor not found");
         authorizedEditors[owner][editor] = false;
-    }
+    } 
 
-    function addViewer(address owner, address viewer) public onlyOwner(owner) {
+    function addViewer(address owner, address viewer) public onlyWillOwner(owner) {
         require(viewer != address(0), "Invalid viewer address");
         require(!authorizedViewers[owner][viewer], "Viewer already exists");
         authorizedViewers[owner][viewer] = true;
     }
 
-    function removeViewer(
-        address owner,
-        address viewer
-    ) public onlyOwner(owner) {
+    function removeViewer(address owner, address viewer) public onlyWillOwner(owner) {
         require(authorizedViewers[owner][viewer], "Viewer not found");
         authorizedViewers[owner][viewer] = false;
-    }
+    } 
 
-    function getWillData(address owner) public view returns (WillData memory) {
+    function getWillData(address owner) public view returns (WillLib.WillData memory) {
         return wills[owner];
     }
 
-    function checkBeneficiaries(
-        address owner,
-        address beneficiary
-    ) public view returns (bool check) {
-        return beneficiaryAlloc[owner][beneficiary] > 0;
-    }
+    function checkBeneficiaries(address owner, address beneficiary) public view returns (bool check) {
+        return beneficiaryAllocPercentages[owner][beneficiary] > 0;
+    }   
 
-    function getBeneficiaryAllocation(
-        address owner,
-        address beneficiary
-    ) public view returns (uint256) {
+    function getBeneficiaryAllocationPercentage(address owner, address beneficiary) public view returns (uint256) {
         require(wills[owner].owner != address(0), "Will does not exist");
-        return beneficiaryAlloc[owner][beneficiary];
+        return beneficiaryAllocPercentages[owner][beneficiary];
     }
 
-    function isAuthorisedEditorExist(
-        address owner,
-        address editor
-    ) public view returns (bool check) {
+    function getDigitalAssets(address owner) public view returns (uint256) {
+        require(wills[owner].owner != address(0), "Will does not exist");
+        return wills[owner].digitalAssets;
+    }
+
+    function isAuthorisedEditorExist(address owner, address editor) public view returns (bool check) {
         require(wills[owner].owner != address(0), "Will does not exist");
         return authorizedEditors[owner][editor];
     }
 
-    function isAuthorisedViewer(
-        address owner,
-        address viewer
-    ) public view returns (bool check) {
+    function isAuthorisedViewer(address owner, address viewer) public view returns (bool check) {
         require(wills[owner].owner != address(0), "Will does not exist");
         return authorizedViewers[owner][viewer];
     }
 
-    function getWillState(address owner) public view returns (string memory) {
-        require(wills[owner].owner != address(0), "Will does not exist");
-
-        WillState state = wills[owner].state;
-
-        if (state == WillState.InCreation) return "InCreation";
-        if (state == WillState.InExecution) return "InExecution";
-        if (state == WillState.DeathConfirmed) return "DeathConfirmed";
-        if (state == WillState.GrantOfProbateConfirmed)
-            return "GrantOfProbateConfirmed";
-        if (state == WillState.Closed) return "Closed";
-
-        return "Unknown";
+    function setResidualBeneficiary(address owner, address beneficiary) public onlyWillOwner(owner) onlyAuthorizedEditors(owner) {
+        require(wills[owner].state == WillLib.WillState.InCreation, "Cannot modify after execution");
+        require(beneficiary != address(0), "Invalid beneficiary address"); 
+        wills[owner].residualBeneficiary = beneficiary;
     }
 
-    /* 
-    --------------------------
-        UTILS
-    --------------------------
-    */
-
-    // Helper function to get substring
-    function substring(
-        string memory str,
-        uint startIndex,
-        uint endIndex
-    ) private pure returns (string memory) {
-        bytes memory strBytes = bytes(str);
-        bytes memory result = new bytes(endIndex - startIndex);
-        for (uint i = startIndex; i < endIndex; i++) {
-            result[i - startIndex] = strBytes[i];
-        }
-        return string(result);
+    /***************************
+     * ASSET REGISTRY
+    ****************************/ 
+    // Todos: ensure certificationUrl is valid
+    function createAsset(address owner, string memory description, uint256 value, string memory certificationUrl, address[] memory beneficiaries, uint256[] memory allocations) public onlyAuthorizedEditors(owner) onlyWillOwner(owner) {
+        uint256 assetId = assetRegistry.createAsset(owner, description, value, certificationUrl, beneficiaries, allocations);
+        wills[owner].assetIds.push(assetId);
     }
 
-    //Helper funciton to split string for Death registry NRIC and grant of probate NRIC data
-    function splitString(
-        string memory str,
-        string memory delimiter
-    ) internal pure returns (string[] memory) {
-        bytes memory b = bytes(str);
-        bytes memory delim = bytes(delimiter);
-
-        uint count = 1;
-        for (uint i = 0; i < b.length; i++) {
-            if (b[i] == delim[0]) {
-                count++;
-            }
-        }
-
-        string[] memory parts = new string[](count);
-        uint k = 0;
-        uint lastIndex = 0;
-
-        for (uint i = 0; i < b.length; i++) {
-            if (b[i] == delim[0]) {
-                bytes memory temporary = new bytes(i - lastIndex);
-                for (uint j = lastIndex; j < i; j++) {
-                    temporary[j - lastIndex] = b[j];
-                }
-                parts[k++] = string(temporary);
-                lastIndex = i + 1;
-            }
-        }
-        bytes memory temp = new bytes(b.length - lastIndex);
-        for (uint i = lastIndex; i < b.length; i++) {
-            temp[i - lastIndex] = b[i];
-        }
-        parts[k] = string(temp);
-
-        return parts;
+    function viewAssetDescription(address owner, uint256 assetId) external view onlyViewPermitted(owner) returns (string memory) {
+        return assetRegistry.getAssetInfo(assetId);
     }
+
+    // Todos: should automatically trigger after submitting grant of probate
+    // Todos: only platform can trigger distribution
+    function triggerDistribution(address assetOwner, uint256 assetId) internal {
+        WillLib.WillData storage userWill = wills[assetOwner];
+        require(userWill.owner != address(0), "Will does not exist");
+
+        if (userWill.state == WillLib.WillState.InExecution) {
+            assetRegistry.distributeAsset(assetId);
+        }
+    }
+
+    function updateAssetBeneficiariesAndAllocations(address owner, uint256 assetId, address[] memory newBeneficiaries, uint256[] memory newAllocations) onlyAuthorizedEditors(owner) onlyWillOwner(owner) external {
+        assetRegistry.updateBeneficiariesAndAllocations(assetId, newBeneficiaries, newAllocations);
+    }
+
 }
