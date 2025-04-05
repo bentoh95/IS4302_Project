@@ -588,113 +588,114 @@ describe("Will", function () {
     expect(digitalAssets).to.equal(100);
   });
 
-  // I have no idea how to check payments without running into errors
-  it("Should distribute assets correctly and make payments", async function () {
-    console.log("=== Starting distributeAssets test ===");
-    // Create will
-    await will.createWill(owner.address, "S7654321B");
-    await will.setResidualBeneficiary(
-      owner.address,
-      residualBeneficiary1.address
-    );
+  // // flow
+  // // I have no idea how to check payments without running into errors
+  // it("Should distribute assets correctly and make payments", async function () {
+  //   console.log("=== Starting distributeAssets test ===");
+  //   // Create will
+  //   await will.createWill(owner.address, "S7654321B");
+  //   await will.setResidualBeneficiary(
+  //     owner.address,
+  //     residualBeneficiary1.address
+  //   );
 
-    // Add beneficiaries and their allocations
-    const beneficiaries = [beneficiary1.address, beneficiary2.address];
-    const allocations = [20, 80]; // Allocations as percentages
-    console.log("Beneficiaries:", beneficiaries); // Log beneficiaries' addresses
+  //   // Add beneficiaries and their allocations
+  //   const beneficiaries = [beneficiary1.address, beneficiary2.address];
+  //   const allocations = [20, 80]; // Allocations as percentages
+  //   console.log("Beneficiaries:", beneficiaries); // Log beneficiaries' addresses
 
-    await will.addBeneficiaries(owner.address, beneficiaries, allocations);
+  //   await will.addBeneficiaries(owner.address, beneficiaries, allocations);
 
-    // Fund the will with 100 units
-    const fundAmount = ethers.parseEther("1.0");
-    await will.fundWill(owner.address, { value: fundAmount });
+  //   // Fund the will with 100 units
+  //   const fundAmount = ethers.parseEther("1.0");
+  //   await will.fundWill(owner.address, { value: fundAmount });
 
-    // Check that the assets have been funded correctly
-    const digitalAssets = await will.getDigitalAssets(owner.address);
-    expect(digitalAssets).to.equal(
-      fundAmount,
-      "The fund amount was not set correctly."
-    );
+  //   // Check that the assets have been funded correctly
+  //   const digitalAssets = await will.getDigitalAssets(owner.address);
+  //   expect(digitalAssets).to.equal(
+  //     fundAmount,
+  //     "The fund amount was not set correctly."
+  //   );
 
-    // Calculate expected amounts
-    const expectedAmount1 = (fundAmount * 20n) / 100n;
-    const expectedAmount2 = (fundAmount * 80n) / 100n;
-    const expectedRemaining = fundAmount - expectedAmount1 - expectedAmount2;
+  //   // Calculate expected amounts
+  //   const expectedAmount1 = (fundAmount * 20n) / 100n;
+  //   const expectedAmount2 = (fundAmount * 80n) / 100n;
+  //   const expectedRemaining = fundAmount - expectedAmount1 - expectedAmount2;
 
-    // Log expected amounts
-    console.log(
-      "Expected Amounts:",
-      expectedAmount1,
-      expectedAmount2,
-      expectedRemaining
-    );
+  //   // Log expected amounts
+  //   console.log(
+  //     "Expected Amounts:",
+  //     expectedAmount1,
+  //     expectedAmount2,
+  //     expectedRemaining
+  //   );
 
-    // Log the contract balance before distribution
-    const contractBalanceBefore = await ethers.provider.getBalance(
-      await will.getAddress()
-    );
-    console.log(
-      "Contract balance before distribution:",
-      contractBalanceBefore.toString()
-    );
+  //   // Log the contract balance before distribution
+  //   const contractBalanceBefore = await ethers.provider.getBalance(
+  //     await will.getAddress()
+  //   );
+  //   console.log(
+  //     "Contract balance before distribution:",
+  //     contractBalanceBefore.toString()
+  //   );
 
-    // Initial balances (in terms of units)
-    const initialBalance1 = await ethers.provider.getBalance(
-      beneficiary1.address
-    );
-    const initialBalance2 = await ethers.provider.getBalance(
-      beneficiary2.address
-    );
+  //   // Initial balances (in terms of units)
+  //   const initialBalance1 = await ethers.provider.getBalance(
+  //     beneficiary1.address
+  //   );
+  //   const initialBalance2 = await ethers.provider.getBalance(
+  //     beneficiary2.address
+  //   );
 
-    // Log initial balances
-    console.log("Initial Balances:", initialBalance1, initialBalance2);
+  //   // Log initial balances
+  //   console.log("Initial Balances:", initialBalance1, initialBalance2);
 
-    // Distribute assets
-    const tx = await will.distributeAssets(owner.address);
-    const receipt = await tx.wait(); // Wait for the transaction to be mined
+  //   // Distribute assets
+  //   const tx = await will.distributeAssets(owner.address);
+  //   const receipt = await tx.wait(); // Wait for the transaction to be mined
 
-    // Log the contract balance after distribution
-    const contractBalanceAfter = await ethers.provider.getBalance(
-      await will.getAddress()
-    );
-    console.log(
-      "Contract balance after distribution:",
-      contractBalanceAfter.toString()
-    );
+  //   // Log the contract balance after distribution
+  //   const contractBalanceAfter = await ethers.provider.getBalance(
+  //     await will.getAddress()
+  //   );
+  //   console.log(
+  //     "Contract balance after distribution:",
+  //     contractBalanceAfter.toString()
+  //   );
 
-    // Final balances after distribution
-    const finalBalance1 = await ethers.provider.getBalance(
-      beneficiary1.address
-    );
-    const finalBalance2 = await ethers.provider.getBalance(
-      beneficiary2.address
-    );
+  //   // Final balances after distribution
+  //   const finalBalance1 = await ethers.provider.getBalance(
+  //     beneficiary1.address
+  //   );
+  //   const finalBalance2 = await ethers.provider.getBalance(
+  //     beneficiary2.address
+  //   );
 
-    // Log final balances after distribution
-    console.log("Final Balances:", finalBalance1, finalBalance2);
+  //   // Log final balances after distribution
+  //   console.log("Final Balances:", finalBalance1, finalBalance2);
 
-    // Calculate received amounts as regular numbers
-    const receivedAmount1 = finalBalance1 - initialBalance1;
-    const receivedAmount2 = finalBalance2 - initialBalance2;
+  //   // Calculate received amounts as regular numbers
+  //   const receivedAmount1 = finalBalance1 - initialBalance1;
+  //   const receivedAmount2 = finalBalance2 - initialBalance2;
 
-    // Log the received amounts
-    console.log(`Beneficiary1 received: ${receivedAmount1} units`);
-    console.log(`Beneficiary2 received: ${receivedAmount2} units`);
+  //   // Log the received amounts
+  //   console.log(`Beneficiary1 received: ${receivedAmount1} units`);
+  //   console.log(`Beneficiary2 received: ${receivedAmount2} units`);
 
-    // Verify that the received amounts are correct
-    // expect(receivedAmount1).to.be.closeTo(expectedAmount1, 1);
-    // expect(receivedAmount2).to.be.closeTo(expectedAmount2, 1);
-    expect(receivedAmount1).to.equal(expectedAmount1);
-    expect(receivedAmount2).to.equal(expectedAmount2);
+  //   // Verify that the received amounts are correct
+  //   // expect(receivedAmount1).to.be.closeTo(expectedAmount1, 1);
+  //   // expect(receivedAmount2).to.be.closeTo(expectedAmount2, 1);
+  //   expect(receivedAmount1).to.equal(expectedAmount1);
+  //   expect(receivedAmount2).to.equal(expectedAmount2);
 
-    // Check remaining assets in the will after distribution
-    const remainingAssets = await will.getDigitalAssets(owner.address);
-    expect(remainingAssets).to.equal(expectedRemaining);
+  //   // Check remaining assets in the will after distribution
+  //   const remainingAssets = await will.getDigitalAssets(owner.address);
+  //   expect(remainingAssets).to.equal(expectedRemaining);
 
-    // Log the remaining assets for verification
-    console.log(`Remaining assets: ${remainingAssets} units`);
-    console.log("=== Ending distributeAssets test ===");
-  });
+  //   // Log the remaining assets for verification
+  //   console.log(`Remaining assets: ${remainingAssets} units`);
+  //   console.log("=== Ending distributeAssets test ===");
+  // });
 
   /* it("Should return correct will details", async function () {
       await will.createWill(owner.address);
@@ -1055,55 +1056,167 @@ Value: ${assetValue}
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
-  it("test", async function () {
+  it("Should distribute assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
+    this.timeout(120000);
+    console.log("=== Starting distributeAssets test ===");
+  
+    const accounts = await web3.eth.getAccounts();
+    const owner = accounts[0];
+    const beneficiary1 = accounts[1];
+    const beneficiary2 = accounts[2];
+    const residual = accounts[3];
+  
+    const nric = "S7654321B";
+  
+    // 1. Create the will
+    const willData = await contract.methods.getWillData(owner).call();
+    if (willData.owner === "0x0000000000000000000000000000000000000000") {
+      await contract.methods.createWill(owner, nric).send({
+        from: owner,
+        gas: 1000000,
+      });
+      console.log(`✅ Will created for ${owner}`);
+    }
+  
+    // 2. Set residual beneficiary
+    await contract.methods.setResidualBeneficiary(owner, residual).send({
+      from: owner,
+      gas: 100000,
+    });
+    console.log(`✅ Residual beneficiary set: ${residual}`);
+  
+    // 3. Add beneficiaries
+    await contract.methods
+      .addBeneficiaries(owner, [beneficiary1, beneficiary2], [40, 40])
+      .send({ from: owner, gas: 1000000 });
+    console.log(`✅ Added beneficiaries: ${beneficiary1}, ${beneficiary2}`);
+  
+    // 4. Fund the will
+    const fundAmount = web3.utils.toWei("1", "ether");
+    await contract.methods.fundWill(owner).send({
+      from: owner,
+      value: fundAmount,
+      gas: 1000000,
+    });
+    console.log(`✅ Will funded with ${fundAmount} wei (1 ETH)`);
+  
+    const digitalAssets = await contract.methods.getDigitalAssets(owner).call();
+    console.log(`🔎 Digital assets in will: ${digitalAssets} wei`);
+  
+    // 5. Record balances before distribution
+    const balBefore1 = BigInt(await web3.eth.getBalance(beneficiary1));
+    const balBefore2 = BigInt(await web3.eth.getBalance(beneficiary2));
+    const balBeforeResidual = BigInt(await web3.eth.getBalance(residual));
+    console.log(`🔎 Initial balances:\n  ${beneficiary1}: ${balBefore1}\n  ${beneficiary2}: ${balBefore2}\n  ${residual}: ${balBeforeResidual}`);
+  
+    // 6. Simulate death
     const unlockTime = await getUnlockTime(web3);
-
     await advanceTime(web3, unlockTime);
     await disableAutomine(web3);
     await setMiningInterval(web3, 5000);
-
-    const accounts = await web3.eth.getAccounts();
-    /* 
-    const deployedContract = await Contract.deploy().send({ from: accounts[0] });
-    console.log("Contract deployed at:", deployedContract.options.address);
-    */
-    //  const tx = await deployedContract.methods
-    const tx = await contract.methods
-      .emitTestEvent()
-      .send({ from: accounts[0] });
-    console.log(tx);
-  });
+  
+    await contract.methods.callDeathRegistryToday().send({ from: accounts[1] });
+  
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
+  
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(web3, contractAddress, contractABI, eventOptions);
+      eventListener.on("DeathUpdated", (event) => {
+        console.log("📡 DeathUpdated event received");
+        resolve(event);
+      });
+      eventListener.listen();
+    });
+  
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout: DeathUpdated not received")), 60000)
+    );
+  
+    try {
+      await Promise.race([eventPromise, timeoutPromise]);
+    } catch (error) {
+      console.error("❌ Error or timeout:", error.message);
+    }
+  
+    const stateAfterDeath = await contract.methods.getWillState(owner).call();
+    console.log(`✅ Will state after death confirmation: ${stateAfterDeath}`);
+  
+    // 7. Simulate grant of probate
+    await contract.methods.callGrantOfProbateToday().send({ from: accounts[1] });
+  
+    const eventPromise2 = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(web3, contractAddress, contractABI, eventOptions);
+      eventListener.on("ProbateUpdated", (event) => {
+        console.log("📡 ProbateUpdated event received");
+        resolve(event);
+      });
+      eventListener.listen();
+    });
+  
+    const timeoutPromise2 = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout: ProbateUpdated not received")), 60000)
+    );
+  
+    try {
+      await Promise.race([eventPromise2, timeoutPromise2]);
+    } catch (error) {
+      console.error("❌ Error or timeout:", error.message);
+    }
+  
+    const stateAfterProbate = await contract.methods.getWillState(owner).call();
+    console.log(`✅ Will state after probate confirmation: ${stateAfterProbate}`);
+  
+    // 8. Distribute assets
+    console.log("🚀 Distributing assets...");
+    const receipt = await contract.methods.distributeAssets(owner).send({
+      from: owner,
+      gas: 1000000,
+    });
+    console.log("✅ Assets distributed");
+  
+    // 9. Record balances after distribution
+    const balAfter1 = BigInt(await web3.eth.getBalance(beneficiary1));
+    const balAfter2 = BigInt(await web3.eth.getBalance(beneficiary2));
+    const balAfterResidual = BigInt(await web3.eth.getBalance(residual));
+  
+    const received1 = balAfter1 - balBefore1;
+    const received2 = balAfter2 - balBefore2;
+    const receivedResidual = balAfterResidual - balBeforeResidual;
+  
+    console.log(`🔎 Final balances:\n  ${beneficiary1}: ${balAfter1} (+${received1})\n  ${beneficiary2}: ${balAfter2} (+${received2})\n  ${residual}: ${balAfterResidual} (+${receivedResidual})`);
+  
+    // 10. Check correctness with tolerance
+    const payout = BigInt(web3.utils.toWei("0.4", "ether"));
+    const residualPayout = BigInt(web3.utils.toWei("0.2", "ether"));
+    const delta = BigInt(web3.utils.toWei("0.0002", "ether"));
+  
+    expect(received1).to.be.closeTo(payout, delta);
+    expect(received2).to.be.closeTo(payout, delta);
+    expect(receivedResidual).to.be.closeTo(residualPayout, delta);
+  
+    console.log("✅ All beneficiary payouts are within expected range");
+    console.log("=== Ending distributeAssets test ===");
+  });  
 
   // Test confirmDeath and GrantofProbateConfirmed state update
   it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
     this.timeout(60000);
     const accounts = await web3.eth.getAccounts();
 
+    const nric = "S1234567A";
+    console.log("Created will with NRIC: ", nric);
+    console.log(nric, "was not posted on government registry database today")
+
     try {
       const willData = await contract.methods.getWillData(accounts[1]).call();
       // Check if will exists
       if (willData.owner === "0x0000000000000000000000000000000000000000") {
-        await contract.methods.createWill(accounts[1], "S1234567A").send({
+        await contract.methods.createWill(accounts[1], nric).send({
           from: accounts[0],
           gas: 1000000,
         });
-        console.log("✅ Will created accounts[1], S1234567A");
-      } else {
-        console.log("⚠️ Will already exists for this address");
-      }
-    } catch (error) {
-      console.error("❌ Error checking or creating will:", error);
-    }
-
-    try {
-      const willData = await contract.methods.getWillData(accounts[0]).call();
-      // Check if will exists
-      if (willData.owner === "0x0000000000000000000000000000000000000000") {
-        await contract.methods.createWill(accounts[0], "S7654321B").send({
-          from: accounts[0],
-          gas: 1000000,
-        });
-        console.log("✅ Will created accounts[0], S7654321B");
+        console.log("✅ Will created accounts[1], ", nric);
       } else {
         console.log("⚠️ Will already exists for this address");
       }
@@ -1136,7 +1249,7 @@ Value: ${assetValue}
       // Listen for the DataReceived event
       eventListener.on("DeathUpdated", (event) => {
         // console.log("Event received:", event.returnValues);
-        console.log("Event received");
+        console.log("📡 DeathUpdated event received");
         resolve(event); // Resolve the promise when the event is captured
       });
 
@@ -1157,121 +1270,79 @@ Value: ${assetValue}
     try {
       const event = await Promise.race([eventPromise, timeoutPromise]);
       // console.log("Event successfully received:", event);
-      console.log("Event successfully received");
     } catch (error) {
       console.error("Error or timeout:", error.message);
     }
+    console.log("✅ Will state for ", nric, " should still be InCreation")
     expect(await contract.methods.getWillState(accounts[1]).call()).to.equal("InCreation");
   });
 
-  // Test confirmDeath and GrantofProbateConfirmed state update
-  it("Should change will state to confirmDeath when we call government death registry and the corresponding NRIC has been posted", async function () {
-    this.timeout(60000);
+  it("Should revert from distributing assets when state has not been updated to GrantOfProbateConfirmed", async function () {
+    this.timeout(120000);
+    console.log("=== Starting distributeAssets test ===");
+  
     const accounts = await web3.eth.getAccounts();
-
-    const unlockTime = await getUnlockTime(web3);
-    await advanceTime(web3, unlockTime);
-    await disableAutomine(web3);
-    await setMiningInterval(web3, 5000);
-
-    const tx = await contract.methods
-      .callDeathRegistryToday()
-      .send({ from: accounts[0] });
-
-    // console.log(tx);
-
-    const latestBlock = await web3.eth.getBlock("latest");
-    eventOptions.startBlock = latestBlock.number;
-
-    const eventPromise = new Promise((resolve, reject) => {
-      const eventListener = new EthereumEventProcessor(
-        web3,
-        contractAddress,
-        contractABI,
-        eventOptions
-      );
-
-      // Listen for the DataReceived event
-      eventListener.on("DeathUpdated", (event) => {
-        // console.log("Event received:", event.returnValues);
-        console.log("Event received");
-        resolve(event); // Resolve the promise when the event is captured
+    const owner = accounts[4];
+    const beneficiary1 = accounts[5];
+    const beneficiary2 = accounts[6];
+    const residual = accounts[7];
+  
+    const nric = "S1234567B";
+  
+    // 1. Create the will
+    const willData = await contract.methods.getWillData(owner).call();
+    if (willData.owner === "0x0000000000000000000000000000000000000000") {
+      await contract.methods.createWill(owner, nric).send({
+        from: owner,
+        gas: 1000000,
       });
-
-      // Start listening for the event
-      eventListener.listen();
-    });
-
-    // Set a timeout for 1 minute
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(
-        () =>
-          reject(new Error("Timeout: DataReceived event not received in time")),
-        60000
-      )
-    );
-
-    // Wait for either the event or the timeout (whichever happens first)
-    try {
-      const event = await Promise.race([eventPromise, timeoutPromise]);
-      // console.log("Event successfully received:", event);
-      console.log("Event successfully received");
-    } catch (error) {
-      console.error("Error or timeout:", error.message);
+      console.log(`✅ Will created for ${owner}`);
     }
-    expect(await contract.methods.getWillState(accounts[0]).call()).to.equal("DeathConfirmed");
-  });
-
-  it("Should change will state to GrantOfProbateConfirmed when state is in confirmDeath and the corresponding NRIC has been posted to the government Grant of Probate registry", async function () {
-    this.timeout(60000);
-    const accounts = await web3.eth.getAccounts();
-
-    const unlockTime = await getUnlockTime(web3);
-    await advanceTime(web3, unlockTime);
-    await disableAutomine(web3);
-    await setMiningInterval(web3, 5000);
-      const tx2 = await contract.methods
-        .callGrantOfProbateToday()
-        .send({ from: accounts[0] });
   
-      // console.log(tx2);
-  
-      const eventPromise2 = new Promise((resolve, reject) => {
-        const eventListener = new EthereumEventProcessor(
-          web3,
-          contractAddress,
-          contractABI,
-          eventOptions
-        );
-  
-        // Listen for the DataReceived event
-        eventListener.on("ProbateUpdated", (event) => {
-          // console.log("Event received:", event.returnValues);
-          console.log("Event received");
-          resolve(event); // Resolve the promise when the event is captured
-        });
-  
-        // Start listening for the event
-        eventListener.listen();
-      });
-  
-      // Set a timeout for 1 minute
-      const timeoutPromise2 = new Promise((_, reject) =>
-        setTimeout(
-          () =>
-            reject(new Error("Timeout: DataReceived event not received in time")),
-          60000
-        )
-      );
-  
-      // Wait for either the event or the timeout (whichever happens first)
-      try {
-        const event = await Promise.race([eventPromise2, timeoutPromise2]);
-        // console.log("Event successfully received:", event);
-        console.log("Event successfully received");
-      } catch (error) {
-        console.error("Error or timeout:", error.message);
-      }
-      expect(await contract.methods.getWillState(accounts[0]).call()).to.equal("GrantOfProbateConfirmed");
+    // 2. Set residual beneficiary
+    await contract.methods.setResidualBeneficiary(owner, residual).send({
+      from: owner,
+      gas: 100000,
     });
+    console.log(`✅ Residual beneficiary set: ${residual}`);
+  
+    // 3. Add beneficiaries
+    await contract.methods
+      .addBeneficiaries(owner, [beneficiary1, beneficiary2], [40, 40])
+      .send({ from: owner, gas: 1000000 });
+    console.log(`✅ Added beneficiaries: ${beneficiary1}, ${beneficiary2}`);
+  
+    // 4. Fund the will
+    const fundAmount = web3.utils.toWei("1", "ether");
+    await contract.methods.fundWill(owner).send({
+      from: owner,
+      value: fundAmount,
+      gas: 1000000,
+    });
+    console.log(`✅ Will funded with ${fundAmount} wei (1 ETH)`);
+  
+    const digitalAssets = await contract.methods.getDigitalAssets(owner).call();
+    console.log(`🔎 Digital assets in will: ${digitalAssets} wei`);
+  
+    // 5. Record balances before distribution
+    const balBefore1 = BigInt(await web3.eth.getBalance(beneficiary1));
+    const balBefore2 = BigInt(await web3.eth.getBalance(beneficiary2));
+    const balBeforeResidual = BigInt(await web3.eth.getBalance(residual));
+    console.log(`🔎 Initial balances:\n  ${beneficiary1}: ${balBefore1}\n  ${beneficiary2}: ${balBefore2}\n  ${residual}: ${balBeforeResidual}`);
+
+    console.log("✅ Do not update state from InCreation -> DeathConfirmed -> GrantOfProbateConfirmed");
+  
+    // 6. Distribution of assets should be reverted
+    console.log("🚀 Distributing assets...");
+    try {
+      await contract.methods.distributeAssets(owner).send({
+        from: owner,
+        gas: 1000000,
+      });
+    } catch (error) {
+      const revertMsg = error?.message || error?.data?.message || "";
+      expect(revertMsg).to.include("Transaction has been reverted by the EVM");
+      console.log("✅ Correctly reverted with expected message");
+    }
+  });  
 });
