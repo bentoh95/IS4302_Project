@@ -3,6 +3,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/web3": "^1.0.20",
+    "dotenv": "^16.4.7",
     "hardhat": "^2.22.19",
     "hardhat-abi-exporter": "^2.10.1"
   },
