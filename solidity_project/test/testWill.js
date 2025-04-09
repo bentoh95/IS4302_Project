@@ -1137,293 +1137,293 @@ Value: ${assetValue}
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
-  // it("Should distribute digital assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
-  //   this.timeout(120000);
-  //   console.log("=== Starting distributeAssets test ===");
+  it("Should distribute digital assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
+    this.timeout(120000);
+    console.log("=== Starting distributeAssets test ===");
   
-  //   const accounts = await web3.eth.getAccounts();
-  //   const owner = accounts[0];
-  //   const beneficiary1 = accounts[1];
-  //   const beneficiary2 = accounts[2];
-  //   const residual = accounts[3];
+    const accounts = await web3.eth.getAccounts();
+    const owner = accounts[0];
+    const beneficiary1 = accounts[1];
+    const beneficiary2 = accounts[2];
+    const residual = accounts[3];
   
-  //   const nric = "S7654321B";
+    const nric = "S7654321B";
   
-  //   // 1. Create the will
-  //   const willData = await contract.methods.getWillData(owner).call();
-  //   if (willData.owner === "0x0000000000000000000000000000000000000000") {
-  //     await contract.methods.createWill(owner, nric).send({
-  //       from: owner,
-  //       gas: 1000000,
-  //     });
-  //     console.log(`✅ Will created for ${owner}`);
-  //   }
+    // 1. Create the will
+    const willData = await contract.methods.getWillData(owner).call();
+    if (willData.owner === "0x0000000000000000000000000000000000000000") {
+      await contract.methods.createWill(owner, nric).send({
+        from: owner,
+        gas: 1000000,
+      });
+      console.log(`✅ Will created for ${owner}`);
+    }
   
-  //   // 2. Set residual beneficiary
-  //   await contract.methods.setResidualBeneficiary(owner, residual).send({
-  //     from: owner,
-  //     gas: 100000,
-  //   });
-  //   console.log(`✅ Residual beneficiary set: ${residual}`);
+    // 2. Set residual beneficiary
+    await contract.methods.setResidualBeneficiary(owner, residual).send({
+      from: owner,
+      gas: 100000,
+    });
+    console.log(`✅ Residual beneficiary set: ${residual}`);
   
-  //   // 3. Add beneficiaries
-  //   await contract.methods
-  //     .addBeneficiaries(owner, [beneficiary1, beneficiary2], [40, 40])
-  //     .send({ from: owner, gas: 1000000 });
-  //   console.log(`✅ Added beneficiaries: ${beneficiary1}, ${beneficiary2}`);
+    // 3. Add beneficiaries
+    await contract.methods
+      .addBeneficiaries(owner, [beneficiary1, beneficiary2], [40, 40])
+      .send({ from: owner, gas: 1000000 });
+    console.log(`✅ Added beneficiaries: ${beneficiary1}, ${beneficiary2}`);
   
-  //   // 4. Fund the will
-  //   const fundAmount = web3.utils.toWei("1", "ether");
-  //   await contract.methods.fundWill(owner).send({
-  //     from: owner,
-  //     value: fundAmount,
-  //     gas: 1000000,
-  //   });
-  //   console.log(`✅ Will funded with ${fundAmount} wei (1 ETH)`);
+    // 4. Fund the will
+    const fundAmount = web3.utils.toWei("1", "ether");
+    await contract.methods.fundWill(owner).send({
+      from: owner,
+      value: fundAmount,
+      gas: 1000000,
+    });
+    console.log(`✅ Will funded with ${fundAmount} wei (1 ETH)`);
   
-  //   const digitalAssets = await contract.methods.getDigitalAssets(owner).call();
-  //   console.log(`🔎 Digital assets in will: ${digitalAssets} wei`);
+    const digitalAssets = await contract.methods.getDigitalAssets(owner).call();
+    console.log(`🔎 Digital assets in will: ${digitalAssets} wei`);
   
-  //   // 5. Record balances before distribution
-  //   const balBefore1 = BigInt(await web3.eth.getBalance(beneficiary1));
-  //   const balBefore2 = BigInt(await web3.eth.getBalance(beneficiary2));
-  //   const balBeforeResidual = BigInt(await web3.eth.getBalance(residual));
-  //   console.log(`🔎 Initial balances:\n  ${beneficiary1}: ${balBefore1}\n  ${beneficiary2}: ${balBefore2}\n  ${residual}: ${balBeforeResidual}`);
+    // 5. Record balances before distribution
+    const balBefore1 = BigInt(await web3.eth.getBalance(beneficiary1));
+    const balBefore2 = BigInt(await web3.eth.getBalance(beneficiary2));
+    const balBeforeResidual = BigInt(await web3.eth.getBalance(residual));
+    console.log(`🔎 Initial balances:\n  ${beneficiary1}: ${balBefore1}\n  ${beneficiary2}: ${balBefore2}\n  ${residual}: ${balBeforeResidual}`);
   
-  //   // 6. Simulate death
-  //   const unlockTime = await getUnlockTime(web3);
-  //   await advanceTime(web3, unlockTime);
-  //   await disableAutomine(web3);
-  //   await setMiningInterval(web3, 5000);
+    // 6. Simulate death
+    const unlockTime = await getUnlockTime(web3);
+    await advanceTime(web3, unlockTime);
+    await disableAutomine(web3);
+    await setMiningInterval(web3, 5000);
   
-  //   await contract.methods.callDeathRegistryToday().send({ from: accounts[1] });
+    await contract.methods.callDeathRegistryToday().send({ from: accounts[1] });
   
-  //   const latestBlock = await web3.eth.getBlock("latest");
-  //   eventOptions.startBlock = latestBlock.number;
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
   
-  //   const eventPromise = new Promise((resolve, reject) => {
-  //     const eventListener = new EthereumEventProcessor(web3, contractAddress, contractABI, eventOptions);
-  //     eventListener.on("DeathUpdated", (event) => {
-  //       console.log("📡 DeathUpdated event received");
-  //       resolve(event);
-  //     });
-  //     eventListener.listen();
-  //   });
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(web3, contractAddress, contractABI, eventOptions);
+      eventListener.on("DeathUpdated", (event) => {
+        console.log("📡 DeathUpdated event received");
+        resolve(event);
+      });
+      eventListener.listen();
+    });
   
-  //   const timeoutPromise = new Promise((_, reject) =>
-  //     setTimeout(() => reject(new Error("Timeout: DeathUpdated not received")), 60000)
-  //   );
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout: DeathUpdated not received")), 60000)
+    );
   
-  //   try {
-  //     await Promise.race([eventPromise, timeoutPromise]);
-  //   } catch (error) {
-  //     console.error("❌ Error or timeout:", error.message);
-  //   }
+    try {
+      await Promise.race([eventPromise, timeoutPromise]);
+    } catch (error) {
+      console.error("❌ Error or timeout:", error.message);
+    }
   
-  //   const stateAfterDeath = await contract.methods.getWillState(owner).call();
-  //   console.log(`✅ Will state after death confirmation: ${stateAfterDeath}`);
+    const stateAfterDeath = await contract.methods.getWillState(owner).call();
+    console.log(`✅ Will state after death confirmation: ${stateAfterDeath}`);
   
-  //   // 7. Simulate grant of probate
-  //   await contract.methods.callGrantOfProbateToday().send({ from: accounts[1] });
+    // 7. Simulate grant of probate
+    await contract.methods.callGrantOfProbateToday().send({ from: accounts[1] });
   
-  //   const eventPromise2 = new Promise((resolve, reject) => {
-  //     const eventListener = new EthereumEventProcessor(web3, contractAddress, contractABI, eventOptions);
-  //     eventListener.on("ProbateUpdated", (event) => {
-  //       console.log("📡 ProbateUpdated event received");
-  //       resolve(event);
-  //     });
-  //     eventListener.listen();
-  //   });
+    const eventPromise2 = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(web3, contractAddress, contractABI, eventOptions);
+      eventListener.on("ProbateUpdated", (event) => {
+        console.log("📡 ProbateUpdated event received");
+        resolve(event);
+      });
+      eventListener.listen();
+    });
   
-  //   const timeoutPromise2 = new Promise((_, reject) =>
-  //     setTimeout(() => reject(new Error("Timeout: ProbateUpdated not received")), 60000)
-  //   );
+    const timeoutPromise2 = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout: ProbateUpdated not received")), 60000)
+    );
   
-  //   try {
-  //     await Promise.race([eventPromise2, timeoutPromise2]);
-  //   } catch (error) {
-  //     console.error("❌ Error or timeout:", error.message);
-  //   }
+    try {
+      await Promise.race([eventPromise2, timeoutPromise2]);
+    } catch (error) {
+      console.error("❌ Error or timeout:", error.message);
+    }
   
-  //   const stateAfterProbate = await contract.methods.getWillState(owner).call();
-  //   console.log(`✅ Will state after probate confirmation: ${stateAfterProbate}`);
+    const stateAfterProbate = await contract.methods.getWillState(owner).call();
+    console.log(`✅ Will state after probate confirmation: ${stateAfterProbate}`);
   
-  //   // 8. Distribute assets
-  //   console.log("🚀 Distributing assets...");
-  //   const receipt = await contract.methods.distributeAssets(owner).send({
-  //     from: owner,
-  //     gas: 1000000,
-  //   });
-  //   console.log("✅ Assets distributed");
+    // 8. Distribute assets
+    console.log("🚀 Distributing assets...");
+    const receipt = await contract.methods.distributeAssets(owner).send({
+      from: owner,
+      gas: 1000000,
+    });
+    console.log("✅ Assets distributed");
   
-  //   // 9. Record balances after distribution
-  //   const balAfter1 = BigInt(await web3.eth.getBalance(beneficiary1));
-  //   const balAfter2 = BigInt(await web3.eth.getBalance(beneficiary2));
-  //   const balAfterResidual = BigInt(await web3.eth.getBalance(residual));
+    // 9. Record balances after distribution
+    const balAfter1 = BigInt(await web3.eth.getBalance(beneficiary1));
+    const balAfter2 = BigInt(await web3.eth.getBalance(beneficiary2));
+    const balAfterResidual = BigInt(await web3.eth.getBalance(residual));
   
-  //   const received1 = balAfter1 - balBefore1;
-  //   const received2 = balAfter2 - balBefore2;
-  //   const receivedResidual = balAfterResidual - balBeforeResidual;
+    const received1 = balAfter1 - balBefore1;
+    const received2 = balAfter2 - balBefore2;
+    const receivedResidual = balAfterResidual - balBeforeResidual;
   
-  //   console.log(`🔎 Final balances:\n  ${beneficiary1}: ${balAfter1} (+${received1})\n  ${beneficiary2}: ${balAfter2} (+${received2})\n  ${residual}: ${balAfterResidual} (+${receivedResidual})`);
+    console.log(`🔎 Final balances:\n  ${beneficiary1}: ${balAfter1} (+${received1})\n  ${beneficiary2}: ${balAfter2} (+${received2})\n  ${residual}: ${balAfterResidual} (+${receivedResidual})`);
   
-  //   // 10. Check correctness with tolerance
-  //   const payout = BigInt(web3.utils.toWei("0.4", "ether"));
-  //   const residualPayout = BigInt(web3.utils.toWei("0.2", "ether"));
-  //   const delta = BigInt(web3.utils.toWei("0.0002", "ether"));
+    // 10. Check correctness with tolerance
+    const payout = BigInt(web3.utils.toWei("0.4", "ether"));
+    const residualPayout = BigInt(web3.utils.toWei("0.2", "ether"));
+    const delta = BigInt(web3.utils.toWei("0.0002", "ether"));
   
-  //   expect(received1).to.be.closeTo(payout, delta);
-  //   expect(received2).to.be.closeTo(payout, delta);
-  //   expect(receivedResidual).to.be.closeTo(residualPayout, delta);
+    expect(received1).to.be.closeTo(payout, delta);
+    expect(received2).to.be.closeTo(payout, delta);
+    expect(receivedResidual).to.be.closeTo(residualPayout, delta);
   
-  //   console.log("✅ All beneficiary payouts are within expected range");
-  //   console.log("=== Ending distributeAssets test ===");
-  // });  
+    console.log("✅ All beneficiary payouts are within expected range");
+    console.log("=== Ending distributeAssets test ===");
+  });  
 
-  // // Test confirmDeath and GrantofProbateConfirmed state update
-  // it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
-  //   this.timeout(60000);
-  //   const accounts = await web3.eth.getAccounts();
+  // Test confirmDeath and GrantofProbateConfirmed state update
+  it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
+    this.timeout(60000);
+    const accounts = await web3.eth.getAccounts();
 
-  //   const nric = "S1234567A";
-  //   console.log("Created will with NRIC: ", nric);
-  //   console.log(nric, "was not posted on government registry database today")
+    const nric = "S1234567A";
+    console.log("Created will with NRIC: ", nric);
+    console.log(nric, "was not posted on government registry database today")
 
-  //   try {
-  //     const willData = await contract.methods.getWillData(accounts[1]).call();
-  //     // Check if will exists
-  //     if (willData.owner === "0x0000000000000000000000000000000000000000") {
-  //       await contract.methods.createWill(accounts[1], nric).send({
-  //         from: accounts[0],
-  //         gas: 1000000,
-  //       });
-  //       console.log("✅ Will created accounts[1], ", nric);
-  //     } else {
-  //       console.log("⚠️ Will already exists for this address");
-  //     }
-  //   } catch (error) {
-  //     console.error("❌ Error checking or creating will:", error);
-  //   }
+    try {
+      const willData = await contract.methods.getWillData(accounts[1]).call();
+      // Check if will exists
+      if (willData.owner === "0x0000000000000000000000000000000000000000") {
+        await contract.methods.createWill(accounts[1], nric).send({
+          from: accounts[0],
+          gas: 1000000,
+        });
+        console.log("✅ Will created accounts[1], ", nric);
+      } else {
+        console.log("⚠️ Will already exists for this address");
+      }
+    } catch (error) {
+      console.error("❌ Error checking or creating will:", error);
+    }
 
-  //   const unlockTime = await getUnlockTime(web3);
-  //   await advanceTime(web3, unlockTime);
-  //   await disableAutomine(web3);
-  //   await setMiningInterval(web3, 5000);
+    const unlockTime = await getUnlockTime(web3);
+    await advanceTime(web3, unlockTime);
+    await disableAutomine(web3);
+    await setMiningInterval(web3, 5000);
 
-  //   const tx = await contract.methods
-  //     .callDeathRegistryToday()
-  //     .send({ from: accounts[1] });
+    const tx = await contract.methods
+      .callDeathRegistryToday()
+      .send({ from: accounts[1] });
 
-  //   // console.log(tx);
+    // console.log(tx);
 
-  //   const latestBlock = await web3.eth.getBlock("latest");
-  //   eventOptions.startBlock = latestBlock.number;
+    const latestBlock = await web3.eth.getBlock("latest");
+    eventOptions.startBlock = latestBlock.number;
 
-  //   const eventPromise = new Promise((resolve, reject) => {
-  //     const eventListener = new EthereumEventProcessor(
-  //       web3,
-  //       contractAddress,
-  //       contractABI,
-  //       eventOptions
-  //     );
+    const eventPromise = new Promise((resolve, reject) => {
+      const eventListener = new EthereumEventProcessor(
+        web3,
+        contractAddress,
+        contractABI,
+        eventOptions
+      );
 
-  //     // Listen for the DataReceived event
-  //     eventListener.on("DeathUpdated", (event) => {
-  //       // console.log("Event received:", event.returnValues);
-  //       console.log("📡 DeathUpdated event received");
-  //       resolve(event); // Resolve the promise when the event is captured
-  //     });
+      // Listen for the DataReceived event
+      eventListener.on("DeathUpdated", (event) => {
+        // console.log("Event received:", event.returnValues);
+        console.log("📡 DeathUpdated event received");
+        resolve(event); // Resolve the promise when the event is captured
+      });
 
-  //     // Start listening for the event
-  //     eventListener.listen();
-  //   });
+      // Start listening for the event
+      eventListener.listen();
+    });
 
-  //   // Set a timeout for 1 minute
-  //   const timeoutPromise = new Promise((_, reject) =>
-  //     setTimeout(
-  //       () =>
-  //         reject(new Error("Timeout: DataReceived event not received in time")),
-  //       60000
-  //     )
-  //   );
+    // Set a timeout for 1 minute
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(new Error("Timeout: DataReceived event not received in time")),
+        60000
+      )
+    );
 
-  //   // Wait for either the event or the timeout (whichever happens first)
-  //   try {
-  //     const event = await Promise.race([eventPromise, timeoutPromise]);
-  //     // console.log("Event successfully received:", event);
-  //   } catch (error) {
-  //     console.error("Error or timeout:", error.message);
-  //   }
-  //   console.log("✅ Will state for ", nric, " should still be InCreation")
-  //   expect(await contract.methods.getWillState(accounts[1]).call()).to.equal("InCreation");
-  // });
+    // Wait for either the event or the timeout (whichever happens first)
+    try {
+      const event = await Promise.race([eventPromise, timeoutPromise]);
+      // console.log("Event successfully received:", event);
+    } catch (error) {
+      console.error("Error or timeout:", error.message);
+    }
+    console.log("✅ Will state for ", nric, " should still be InCreation")
+    expect(await contract.methods.getWillState(accounts[1]).call()).to.equal("InCreation");
+  });
 
-  // it("Should revert from distributing assets when state has not been updated to GrantOfProbateConfirmed", async function () {
-  //   this.timeout(120000);
-  //   console.log("=== Starting distributeAssets test ===");
+  it("Should revert from distributing assets when state has not been updated to GrantOfProbateConfirmed", async function () {
+    this.timeout(120000);
+    console.log("=== Starting distributeAssets test ===");
   
-  //   const accounts = await web3.eth.getAccounts();
-  //   const owner = accounts[4];
-  //   const beneficiary1 = accounts[5];
-  //   const beneficiary2 = accounts[6];
-  //   const residual = accounts[7];
+    const accounts = await web3.eth.getAccounts();
+    const owner = accounts[4];
+    const beneficiary1 = accounts[5];
+    const beneficiary2 = accounts[6];
+    const residual = accounts[7];
   
-  //   const nric = "S1234567B";
+    const nric = "S1234567B";
   
-  //   // 1. Create the will
-  //   const willData = await contract.methods.getWillData(owner).call();
-  //   if (willData.owner === "0x0000000000000000000000000000000000000000") {
-  //     await contract.methods.createWill(owner, nric).send({
-  //       from: owner,
-  //       gas: 1000000,
-  //     });
-  //     console.log(`✅ Will created for ${owner}`);
-  //   }
+    // 1. Create the will
+    const willData = await contract.methods.getWillData(owner).call();
+    if (willData.owner === "0x0000000000000000000000000000000000000000") {
+      await contract.methods.createWill(owner, nric).send({
+        from: owner,
+        gas: 1000000,
+      });
+      console.log(`✅ Will created for ${owner}`);
+    }
   
-  //   // 2. Set residual beneficiary
-  //   await contract.methods.setResidualBeneficiary(owner, residual).send({
-  //     from: owner,
-  //     gas: 100000,
-  //   });
-  //   console.log(`✅ Residual beneficiary set: ${residual}`);
+    // 2. Set residual beneficiary
+    await contract.methods.setResidualBeneficiary(owner, residual).send({
+      from: owner,
+      gas: 100000,
+    });
+    console.log(`✅ Residual beneficiary set: ${residual}`);
   
-  //   // 3. Add beneficiaries
-  //   await contract.methods
-  //     .addBeneficiaries(owner, [beneficiary1, beneficiary2], [40, 40])
-  //     .send({ from: owner, gas: 1000000 });
-  //   console.log(`✅ Added beneficiaries: ${beneficiary1}, ${beneficiary2}`);
+    // 3. Add beneficiaries
+    await contract.methods
+      .addBeneficiaries(owner, [beneficiary1, beneficiary2], [40, 40])
+      .send({ from: owner, gas: 1000000 });
+    console.log(`✅ Added beneficiaries: ${beneficiary1}, ${beneficiary2}`);
   
-  //   // 4. Fund the will
-  //   const fundAmount = web3.utils.toWei("1", "ether");
-  //   await contract.methods.fundWill(owner).send({
-  //     from: owner,
-  //     value: fundAmount,
-  //     gas: 1000000,
-  //   });
-  //   console.log(`✅ Will funded with ${fundAmount} wei (1 ETH)`);
+    // 4. Fund the will
+    const fundAmount = web3.utils.toWei("1", "ether");
+    await contract.methods.fundWill(owner).send({
+      from: owner,
+      value: fundAmount,
+      gas: 1000000,
+    });
+    console.log(`✅ Will funded with ${fundAmount} wei (1 ETH)`);
   
-  //   const digitalAssets = await contract.methods.getDigitalAssets(owner).call();
-  //   console.log(`🔎 Digital assets in will: ${digitalAssets} wei`);
+    const digitalAssets = await contract.methods.getDigitalAssets(owner).call();
+    console.log(`🔎 Digital assets in will: ${digitalAssets} wei`);
   
-  //   // 5. Record balances before distribution
-  //   const balBefore1 = BigInt(await web3.eth.getBalance(beneficiary1));
-  //   const balBefore2 = BigInt(await web3.eth.getBalance(beneficiary2));
-  //   const balBeforeResidual = BigInt(await web3.eth.getBalance(residual));
-  //   console.log(`🔎 Initial balances:\n  ${beneficiary1}: ${balBefore1}\n  ${beneficiary2}: ${balBefore2}\n  ${residual}: ${balBeforeResidual}`);
+    // 5. Record balances before distribution
+    const balBefore1 = BigInt(await web3.eth.getBalance(beneficiary1));
+    const balBefore2 = BigInt(await web3.eth.getBalance(beneficiary2));
+    const balBeforeResidual = BigInt(await web3.eth.getBalance(residual));
+    console.log(`🔎 Initial balances:\n  ${beneficiary1}: ${balBefore1}\n  ${beneficiary2}: ${balBefore2}\n  ${residual}: ${balBeforeResidual}`);
 
-  //   console.log("✅ Do not update state from InCreation -> DeathConfirmed -> GrantOfProbateConfirmed");
+    console.log("✅ Do not update state from InCreation -> DeathConfirmed -> GrantOfProbateConfirmed");
   
-  //   // 6. Distribution of assets should be reverted
-  //   console.log("🚀 Distributing assets...");
-  //   try {
-  //     await contract.methods.distributeAssets(owner).send({
-  //       from: owner,
-  //       gas: 1000000,
-  //     });
-  //   } catch (error) {
-  //     const revertMsg = error?.message || error?.data?.message || "";
-  //     expect(revertMsg).to.include("Transaction has been reverted by the EVM");
-  //     console.log("✅ Correctly reverted with expected message");
-  //   }
-  // });  
+    // 6. Distribution of assets should be reverted
+    console.log("🚀 Distributing assets...");
+    try {
+      await contract.methods.distributeAssets(owner).send({
+        from: owner,
+        gas: 1000000,
+      });
+    } catch (error) {
+      const revertMsg = error?.message || error?.data?.message || "";
+      expect(revertMsg).to.include("Transaction has been reverted by the EVM");
+      console.log("✅ Correctly reverted with expected message");
+    }
+  });  
 });
