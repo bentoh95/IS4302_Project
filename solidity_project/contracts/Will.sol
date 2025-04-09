@@ -45,6 +45,7 @@ contract Will {
         uint256 totalDistributed,
         uint256 remainingAssets
     );
+    event TriggerSkipped(address owner, uint256 assetId, string reason);
     event WillFunded(address indexed owner, uint256 amount);
     event DeathUpdated(string value);
     event ProbateUpdated(string value);
@@ -511,7 +512,10 @@ contract Will {
 
         // Update remaining assets in the will
         userWill.digitalAssets = remainingAssets;
+
+        // Emit events / state
         emit AssetsDistributed(owner, totalDistributed, remainingAssets);
+        userWill.state = WillLib.WillState.Closed;
 
         // Return the distribution details string
         return distributionDetails;
@@ -654,7 +658,6 @@ contract Will {
     /***************************
      * ASSET REGISTRY
      ****************************/
-    // Todos: ensure certificationUrl is valid
     function createAsset(
         address owner,
         string memory description,
@@ -681,15 +684,20 @@ contract Will {
         return assetRegistry.getAssetInfo(assetId);
     }
 
-    // Todos: should automatically trigger after submitting grant of probate
-    // Todos: only platform can trigger distribution
+//  If the will is not in the InExecution state, the function emits a TriggerSkipped event
+//  and exits without reverting, to prevent system breakage.
+//  If the will is in InExecution, the asset is distributed and the will is marked as Closed.
     function triggerDistribution(address assetOwner, uint256 assetId) internal {
         WillLib.WillData storage userWill = wills[assetOwner];
         require(userWill.owner != address(0), "Will does not exist");
 
-        if (userWill.state == WillLib.WillState.InExecution) {
-            assetRegistry.distributeAsset(assetId);
+        if (userWill.state != WillLib.WillState.InExecution) {
+            emit TriggerSkipped(assetOwner, assetId, "Not in InExecution state");
+            return;
         }
+
+        assetRegistry.distributeAsset(assetId);
+        userWill.state = WillLib.WillState.Closed;
     }
 
     function updateAssetBeneficiariesAndAllocations(
@@ -703,5 +711,18 @@ contract Will {
             newBeneficiaries,
             newAllocations
         );
+    }
+
+    /**
+     * For Testing 
+     */
+    function forceSetWillStateInExecution(address ownerAddress) external {
+        WillLib.WillData storage userWill = wills[ownerAddress];
+        require(userWill.owner == ownerAddress, "Will does not exist");
+        userWill.state = WillLib.WillState.InExecution;
+    }
+
+    function callTriggerDistributionForTesting(address assetOwner, uint256 assetId) public {
+        triggerDistribution(assetOwner, assetId);
     }
 }
