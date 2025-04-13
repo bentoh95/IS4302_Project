@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 library WillLib {
     enum WillState {
         InCreation,
-        InExecution,
         DeathConfirmed,
         GrantOfProbateConfirmed,
         Closed

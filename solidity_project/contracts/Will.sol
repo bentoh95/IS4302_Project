@@ -618,7 +618,6 @@ contract Will {
         WillLib.WillState state = wills[owner].state;
 
         if (state == WillLib.WillState.InCreation) return "InCreation";
-        if (state == WillLib.WillState.InExecution) return "InExecution";
         if (state == WillLib.WillState.DeathConfirmed) return "DeathConfirmed";
         if (state == WillLib.WillState.GrantOfProbateConfirmed)
             return "GrantOfProbateConfirmed";
@@ -684,15 +683,15 @@ contract Will {
         return assetRegistry.getAssetInfo(assetId);
     }
 
-//  If the will is not in the InExecution state, the function emits a TriggerSkipped event
+//  If the will is not in the GrantOfProbateConfirmed state, the function emits a TriggerSkipped event
 //  and exits without reverting, to prevent system breakage.
-//  If the will is in InExecution, the asset is distributed and the will is marked as Closed.
+//  If the will is in GrantOfProbateConfirmed, the asset is distributed and the will is marked as Closed.
     function triggerDistribution(address assetOwner, uint256 assetId) internal {
         WillLib.WillData storage userWill = wills[assetOwner];
         require(userWill.owner != address(0), "Will does not exist");
 
-        if (userWill.state != WillLib.WillState.InExecution) {
-            emit TriggerSkipped(assetOwner, assetId, "Not in InExecution state");
+        if (userWill.state != WillLib.WillState.GrantOfProbateConfirmed) {
+            emit TriggerSkipped(assetOwner, assetId, "Not in GrantOfProbateConfirmed state");
             return;
         }
 
@@ -716,10 +715,10 @@ contract Will {
     /**
      * For Testing 
      */
-    function forceSetWillStateInExecution(address ownerAddress) external {
+    function forceSetWillStateGrantOfProbateConfirmed(address ownerAddress) external {
         WillLib.WillData storage userWill = wills[ownerAddress];
         require(userWill.owner == ownerAddress, "Will does not exist");
-        userWill.state = WillLib.WillState.InExecution;
+        userWill.state = WillLib.WillState.GrantOfProbateConfirmed;
     }
 
     function callTriggerDistributionForTesting(address assetOwner, uint256 assetId) public {

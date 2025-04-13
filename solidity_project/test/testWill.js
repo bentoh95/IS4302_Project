@@ -588,7 +588,7 @@ describe("Will", function () {
     expect(digitalAssets).to.equal(100);
   });
 
-  it("Should distribute asset when will state is InExecution and then set will state to Closed", async function () {
+  it("Should distribute asset when will state is GrantOfProbateConfirmed and then set will state to Closed", async function () {
     
     // Set up will for testing
     await will.createWill(owner.address, "S7654321B");
@@ -613,12 +613,12 @@ describe("Will", function () {
       physicalAssetAllocations
     );
   
-    // Force will state to InExecution
-    await will.forceSetWillStateInExecution(owner.address);
+    // Force will state to GrantOfProbateConfirmed
+    await will.forceSetWillStateGrantOfProbateConfirmed(owner.address);
   
-    // Check that the state is "InExecution" before distribution
+    // Check that the state is "GrantOfProbateConfirmed" before distribution
     let currentState = await will.getWillState(owner.address);
-    expect(currentState).to.equal("InExecution");
+    expect(currentState).to.equal("GrantOfProbateConfirmed");
   
     const assetId = 1;
     await will.callTriggerDistributionForTesting(owner.address, assetId)
@@ -659,7 +659,7 @@ describe("Will", function () {
     await expect(
       will.callTriggerDistributionForTesting(owner.address, assetId)
     ).to.emit(will, "TriggerSkipped")
-      .withArgs(owner.address, assetId, "Not in InExecution state");
+      .withArgs(owner.address, assetId, "Not in GrantOfProbateConfirmed state");
     
     // We didn't revert it as it is triggered internally by the system, rather than the user
     // hence we just wanted to make sure it is in execution state
