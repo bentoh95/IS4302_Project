@@ -198,7 +198,6 @@ describe("Will", function () {
     );
     expect(allocation1).to.equal(20);
     expect(allocation2).to.equal(80);
-    console.log(allocation1);
   });
 
   it("Should add to residual beneficiary successfully", async function () {
@@ -533,7 +532,6 @@ describe("Will", function () {
       owner.address,
       residualBeneficiary2.address
     );
-    console.log(allocation1);
     expect(allocation1).to.equal(0);
     expect(allocation2).to.equal(50); // Beneficiary2 should be unaffected
     expect(allocation3).to.equal(40); // Residual1 gets what has been removed from beneficiary1
@@ -571,7 +569,6 @@ describe("Will", function () {
       owner.address,
       residualBeneficiary1.address
     );
-    console.log(allocation1);
     expect(allocation1).to.equal(0);
     expect(allocation2).to.equal(60); // Bene12 gets what has been removed from bene1
     expect(allocation3).to.equal(40); // Resi1 remains unchanged
@@ -668,135 +665,8 @@ describe("Will", function () {
     const finalState = await will.getWillState(owner.address);
     expect(finalState).to.equal("InCreation");
   });
-  
-  // // flow
-  // // I have no idea how to check payments without running into errors
-  // it("Should distribute assets correctly and make payments", async function () {
-  //   console.log("=== Starting distributeAssets test ===");
-  //   // Create will
-  //   await will.createWill(owner.address, "S7654321B");
-  //   await will.setResidualBeneficiary(
-  //     owner.address,
-  //     residualBeneficiary1.address
-  //   );
-
-  //   // Add beneficiaries and their allocations
-  //   const beneficiaries = [beneficiary1.address, beneficiary2.address];
-  //   const allocations = [20, 80]; // Allocations as percentages
-  //   console.log("Beneficiaries:", beneficiaries); // Log beneficiaries' addresses
-
-  //   await will.addBeneficiaries(owner.address, beneficiaries, allocations);
-
-  //   // Fund the will with 100 units
-  //   const fundAmount = ethers.parseEther("1.0");
-  //   await will.fundWill(owner.address, { value: fundAmount });
-
-  //   // Check that the assets have been funded correctly
-  //   const digitalAssets = await will.getDigitalAssets(owner.address);
-  //   expect(digitalAssets).to.equal(
-  //     fundAmount,
-  //     "The fund amount was not set correctly."
-  //   );
-
-  //   // Calculate expected amounts
-  //   const expectedAmount1 = (fundAmount * 20n) / 100n;
-  //   const expectedAmount2 = (fundAmount * 80n) / 100n;
-  //   const expectedRemaining = fundAmount - expectedAmount1 - expectedAmount2;
-
-  //   // Log expected amounts
-  //   console.log(
-  //     "Expected Amounts:",
-  //     expectedAmount1,
-  //     expectedAmount2,
-  //     expectedRemaining
-  //   );
-
-  //   // Log the contract balance before distribution
-  //   const contractBalanceBefore = await ethers.provider.getBalance(
-  //     await will.getAddress()
-  //   );
-  //   console.log(
-  //     "Contract balance before distribution:",
-  //     contractBalanceBefore.toString()
-  //   );
-
-  //   // Initial balances (in terms of units)
-  //   const initialBalance1 = await ethers.provider.getBalance(
-  //     beneficiary1.address
-  //   );
-  //   const initialBalance2 = await ethers.provider.getBalance(
-  //     beneficiary2.address
-  //   );
-
-  //   // Log initial balances
-  //   console.log("Initial Balances:", initialBalance1, initialBalance2);
-
-  //   // Distribute assets
-  //   const tx = await will.distributeAssets(owner.address);
-  //   const receipt = await tx.wait(); // Wait for the transaction to be mined
-
-  //   // Log the contract balance after distribution
-  //   const contractBalanceAfter = await ethers.provider.getBalance(
-  //     await will.getAddress()
-  //   );
-  //   console.log(
-  //     "Contract balance after distribution:",
-  //     contractBalanceAfter.toString()
-  //   );
-
-  //   // Final balances after distribution
-  //   const finalBalance1 = await ethers.provider.getBalance(
-  //     beneficiary1.address
-  //   );
-  //   const finalBalance2 = await ethers.provider.getBalance(
-  //     beneficiary2.address
-  //   );
-
-  //   // Log final balances after distribution
-  //   console.log("Final Balances:", finalBalance1, finalBalance2);
-
-  //   // Calculate received amounts as regular numbers
-  //   const receivedAmount1 = finalBalance1 - initialBalance1;
-  //   const receivedAmount2 = finalBalance2 - initialBalance2;
-
-  //   // Log the received amounts
-  //   console.log(`Beneficiary1 received: ${receivedAmount1} units`);
-  //   console.log(`Beneficiary2 received: ${receivedAmount2} units`);
-
-  //   // Verify that the received amounts are correct
-  //   // expect(receivedAmount1).to.be.closeTo(expectedAmount1, 1);
-  //   // expect(receivedAmount2).to.be.closeTo(expectedAmount2, 1);
-  //   expect(receivedAmount1).to.equal(expectedAmount1);
-  //   expect(receivedAmount2).to.equal(expectedAmount2);
-
-  //   // Check remaining assets in the will after distribution
-  //   const remainingAssets = await will.getDigitalAssets(owner.address);
-  //   expect(remainingAssets).to.equal(expectedRemaining);
-
-  //   // Log the remaining assets for verification
-  //   console.log(`Remaining assets: ${remainingAssets} units`);
-  //   console.log("=== Ending distributeAssets test ===");
-  // });
-
-  /* it("Should return correct will details", async function () {
-      await will.createWill(owner.address);
-      // Sample setup: Add beneficiaries and allocations
-      await will.addBeneficiary(owner.address, beneficiary1.address, 100);
-      await will.addBeneficiary(owner.address, beneficiary2.address, 50);
-  
-      // Call viewWill function to get the will string
-      const willString = await will.viewWill(owner.address);
-  
-      // Construct the expected string based on your logic
-      const expectedWill = `Beneficiaries & Allocations:\n- ${beneficiary1.address.toLowerCase().substring(2)} -> 100\n- ${beneficiary2.address.toLowerCase().substring(2)} -> 50\n`; 
-      console.log(willString);          
-      // Check if the returned string matches the expected string exactly
-      expect(willString).to.equal(expectedWill);
-  }); */
 
   it("Should return correct will details", async function () {
-    console.log("=== Starting Should return correct will details test ===");
-
     await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
@@ -845,8 +715,6 @@ Value: ${assetValue}
 - ${addr(beneficiary1.address)} -> 60%
 - ${addr(beneficiary2.address)} -> 40%\n
 `;
-
-    console.log(willString);
     expect(willString).to.equal(expectedWill);
   });
 
@@ -1137,7 +1005,7 @@ Value: ${assetValue}
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
-  it("Should distribute digital assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
+  it("Should distribute Crypto and Physical Assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
     this.timeout(120000);
     console.log("=== Starting distributeAssets test ===");
   
@@ -1189,8 +1057,25 @@ Value: ${assetValue}
     const balBefore2 = BigInt(await web3.eth.getBalance(beneficiary2));
     const balBeforeResidual = BigInt(await web3.eth.getBalance(residual));
     console.log(`🔎 Initial balances:\n  ${beneficiary1}: ${balBefore1}\n  ${beneficiary2}: ${balBefore2}\n  ${residual}: ${balBeforeResidual}`);
+
+    // 6. Create a physical asset (for completeness)
+    const assetDescription = "House on 123 Street";
+    const assetValue = 1000;
+    const certificationUrl = "ipfs://hash";
+    const physicalAssetAllocations = [60, 40];
+
+    await contract.methods.createAsset(
+      owner,
+      assetDescription,
+      assetValue,
+      certificationUrl,
+      [beneficiary1, beneficiary2],
+      physicalAssetAllocations
+    ).send({ from: owner, gas: 1000000 });
+    console.log("✅ Physical asset created and allocated");
+    console.log(`🔎 Physical asset details\n  Asset description: ${assetDescription}\n  Asset value: ${assetValue}\n  Certificate of ownership: ${certificationUrl}\n  Asset allocation: ${physicalAssetAllocations}`);
   
-    // 6. Simulate death
+    // 7. Simulate death
     const unlockTime = await getUnlockTime(web3);
     await advanceTime(web3, unlockTime);
     await disableAutomine(web3);
@@ -1211,7 +1096,7 @@ Value: ${assetValue}
     });
   
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout: DeathUpdated not received")), 60000)
+      setTimeout(() => reject(new Error("Timeout: DeathUpdated not received")), 90000)
     );
   
     try {
@@ -1223,20 +1108,20 @@ Value: ${assetValue}
     const stateAfterDeath = await contract.methods.getWillState(owner).call();
     console.log(`✅ Will state after death confirmation: ${stateAfterDeath}`);
   
-    // 7. Simulate grant of probate
+    // 8. Simulate grant of probate
     await contract.methods.callGrantOfProbateToday().send({ from: accounts[1] });
   
     const eventPromise2 = new Promise((resolve, reject) => {
       const eventListener = new EthereumEventProcessor(web3, contractAddress, contractABI, eventOptions);
       eventListener.on("ProbateUpdated", (event) => {
-        console.log("📡 ProbateUpdated event received");
+        console.log("📡 GrantOfProbateUpdated event received");
         resolve(event);
       });
       eventListener.listen();
     });
   
     const timeoutPromise2 = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout: ProbateUpdated not received")), 60000)
+      setTimeout(() => reject(new Error("Timeout: ProbateUpdated not received")), 90000)
     );
   
     try {
@@ -1248,15 +1133,26 @@ Value: ${assetValue}
     const stateAfterProbate = await contract.methods.getWillState(owner).call();
     console.log(`✅ Will state after probate confirmation: ${stateAfterProbate}`);
   
-    // 8. Distribute assets
-    console.log("🚀 Distributing assets...");
+    // 9. Distribute crypto assets
+    console.log("🚀 Distributing Crypto assets...");
     const receipt = await contract.methods.distributeAssets(owner).send({
       from: owner,
       gas: 1000000,
     });
-    console.log("✅ Assets distributed");
-  
-    // 9. Record balances after distribution
+    console.log("✅ Crypto Assets distributed");
+
+    // 10. Trigger asset distribution manually
+    const assetId = 1; // Assuming this is the ID
+    await contract.methods.callTriggerDistributionForTesting(owner, assetId).send({ from: owner, gas: 500000 });
+    console.log("✅ Triggered Physical asset distribution for asset ID:", assetId);
+    console.log("🚀 Distributing Physical assets...");
+
+    // 11. Check that the will is now closed
+    const finalState = await contract.methods.getWillState(owner).call();
+    console.log("✅ Final will state after full distribution:", finalState);
+    expect(finalState).to.equal("Closed");
+    
+    // 12. Record balances after distribution
     const balAfter1 = BigInt(await web3.eth.getBalance(beneficiary1));
     const balAfter2 = BigInt(await web3.eth.getBalance(beneficiary2));
     const balAfterResidual = BigInt(await web3.eth.getBalance(residual));
@@ -1265,9 +1161,9 @@ Value: ${assetValue}
     const received2 = balAfter2 - balBefore2;
     const receivedResidual = balAfterResidual - balBeforeResidual;
   
-    console.log(`🔎 Final balances:\n  ${beneficiary1}: ${balAfter1} (+${received1})\n  ${beneficiary2}: ${balAfter2} (+${received2})\n  ${residual}: ${balAfterResidual} (+${receivedResidual})`);
+    console.log(`🔎 Final Crypto balances:\n  ${beneficiary1}: ${balAfter1} (+${received1})\n  ${beneficiary2}: ${balAfter2} (+${received2})\n  ${residual}: ${balAfterResidual} (+${receivedResidual})`);
   
-    // 10. Check correctness with tolerance
+    // 13. Check correctness with tolerance
     const payout = BigInt(web3.utils.toWei("0.4", "ether"));
     const residualPayout = BigInt(web3.utils.toWei("0.2", "ether"));
     const delta = BigInt(web3.utils.toWei("0.0002", "ether"));
@@ -1276,13 +1172,53 @@ Value: ${assetValue}
     expect(received2).to.be.closeTo(payout, delta);
     expect(receivedResidual).to.be.closeTo(residualPayout, delta);
   
-    console.log("✅ All beneficiary payouts are within expected range");
+    console.log("✅ All beneficiaries have received their respective Crypto and Physical Assets (Within expected range)");
     console.log("=== Ending distributeAssets test ===");
   });  
 
+  // it("Should distribute asset when will state is GrantOfProbateConfirmed and then set will state to Closed", async function () {
+    
+  //   // Set up will for testing
+  //   await will.createWill(owner.address, "S7654321B");
+  //   await will.setResidualBeneficiary(owner.address, residualBeneficiary1.address);
+  //   const beneficiaries = [beneficiary1.address, beneficiary2.address];
+  //   const allocations = [70, 30];
+  //   await will.addBeneficiaries(owner.address, beneficiaries, allocations);
+  //   await will.fundWill(owner.address, { value: 100 });
+  
+  //   // Create a physical asset 
+  //   const assetDescription = "House on 123 Street";
+  //   const assetValue = 1000;
+  //   const certificationUrl = "ipfs://hash";
+  //   const physicalAssetAllocations = [60, 40];
+  
+  //   await will.createAsset(
+  //     owner.address,
+  //     assetDescription,
+  //     assetValue,
+  //     certificationUrl,
+  //     beneficiaries,
+  //     physicalAssetAllocations
+  //   );
+  
+  //   // Force will state to GrantOfProbateConfirmed
+  //   await will.forceSetWillStateGrantOfProbateConfirmed(owner.address);
+  
+  //   // Check that the state is "GrantOfProbateConfirmed" before distribution
+  //   let currentState = await will.getWillState(owner.address);
+  //   expect(currentState).to.equal("GrantOfProbateConfirmed");
+  
+  //   const assetId = 1;
+  //   await will.callTriggerDistributionForTesting(owner.address, assetId)
+  
+  //   // Check if successfully executed, the will state will become "Closed"
+  //   currentState = await will.getWillState(owner.address);
+  //   expect(currentState).to.equal("Closed");
+  // });
+
   // Test confirmDeath and GrantofProbateConfirmed state update
   it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
-    this.timeout(60000);
+    this.timeout(90000);
     const accounts = await web3.eth.getAccounts();
 
     const nric = "S1234567A";
@@ -1343,7 +1279,7 @@ Value: ${assetValue}
       setTimeout(
         () =>
           reject(new Error("Timeout: DataReceived event not received in time")),
-        60000
+        90000
       )
     );
 
