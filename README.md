@@ -35,10 +35,7 @@ EVENT_BLOCKS_TO_READ=0
 ```
 
 #### To start backend:
-```
-    cd backend 
-    npm start
-```
+``cd backend && npm start ``
 
 #### To start test:
 Run the following in /solidity_project
