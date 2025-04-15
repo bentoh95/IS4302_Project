@@ -1176,46 +1176,6 @@ Value: ${assetValue}
     console.log("=== Ending distributeAssets test ===");
   });  
 
-  // it("Should distribute asset when will state is GrantOfProbateConfirmed and then set will state to Closed", async function () {
-    
-  //   // Set up will for testing
-  //   await will.createWill(owner.address, "S7654321B");
-  //   await will.setResidualBeneficiary(owner.address, residualBeneficiary1.address);
-  //   const beneficiaries = [beneficiary1.address, beneficiary2.address];
-  //   const allocations = [70, 30];
-  //   await will.addBeneficiaries(owner.address, beneficiaries, allocations);
-  //   await will.fundWill(owner.address, { value: 100 });
-  
-  //   // Create a physical asset 
-  //   const assetDescription = "House on 123 Street";
-  //   const assetValue = 1000;
-  //   const certificationUrl = "ipfs://hash";
-  //   const physicalAssetAllocations = [60, 40];
-  
-  //   await will.createAsset(
-  //     owner.address,
-  //     assetDescription,
-  //     assetValue,
-  //     certificationUrl,
-  //     beneficiaries,
-  //     physicalAssetAllocations
-  //   );
-  
-  //   // Force will state to GrantOfProbateConfirmed
-  //   await will.forceSetWillStateGrantOfProbateConfirmed(owner.address);
-  
-  //   // Check that the state is "GrantOfProbateConfirmed" before distribution
-  //   let currentState = await will.getWillState(owner.address);
-  //   expect(currentState).to.equal("GrantOfProbateConfirmed");
-  
-  //   const assetId = 1;
-  //   await will.callTriggerDistributionForTesting(owner.address, assetId)
-  
-  //   // Check if successfully executed, the will state will become "Closed"
-  //   currentState = await will.getWillState(owner.address);
-  //   expect(currentState).to.equal("Closed");
-  // });
-
   // Test confirmDeath and GrantofProbateConfirmed state update
   it("Should not change will state to confirmDeath when we call government death registry and the corresponding NRIC has not been posted", async function () {
     this.timeout(90000);

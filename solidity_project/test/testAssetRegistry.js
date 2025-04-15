@@ -82,30 +82,4 @@ describe("AssetRegistry", function () {
 
     await expect(assetRegistry.distributeAsset(1)).to.not.be.reverted;
   });
-
-//   it("Should only allow platform owner to distribute asset", async function () {
-//     await assetRegistry.createAsset(
-//         willOwner.address,
-//         "asset 1 description",
-//         10,
-//         "image123",
-//         [beneficiary1, beneficiary2],
-//         [50, 50]
-//     );
-//     const assetData = await assetRegistry.getAssetData(1);
-//     expect(assetData.assetOwner).to.equal(willOwner.address);
-//     expect(assetData.beneficiaries.length).to.equal(2);
-
-//     // Try to call distributeAsset from willOwner (NOT the platformOwner)
-//     const registryFromWrongAccount = assetRegistry.connect(willOwner);
-
-//     // Expect this call to revert due to onlyOwner restriction
-//     await expect(registryFromWrongAccount.distributeAsset(1)).to.be.reverted;
-
-//     // Now call it correctly using platformOwner and expect success
-//     const registryFromPlatformOwner = assetRegistry.connect(platformOwner);
-//     await expect(registryFromPlatformOwner.distributeAsset(1)).to.not.be.reverted;
-//   });
-
-
 });

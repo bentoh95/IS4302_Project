@@ -16,7 +16,7 @@ library WillFormat {
         return string(result);
     }
 
-    //Helper funciton to split string for Death registry NRIC and grant of probate NRIC data
+    //Helper function to split string for Death registry NRIC and grant of probate NRIC data
     function splitString(
         string memory str,
         string memory delimiter

@@ -8,7 +8,6 @@ library WillLib {
         GrantOfProbateConfirmed,
         Closed
     }
-    //  enum Role { Viewer, Editor }
 
     struct WillData {
         address owner;
@@ -18,22 +17,6 @@ library WillLib {
         WillState state;
         address residualBeneficiary;
         uint256[] assetIds;
-    }
-
-    // Helper function for validating beneficiary allocation percentages // TODO: why are we not using this !?!?!
-    function validateAllocations(
-        uint256[] memory allocations
-    ) internal pure returns (uint256) {
-        uint256 total = 0;
-        for (uint256 i = 0; i < allocations.length; i++) {
-            require(
-                allocations[i] > 0,
-                "Allocation percentage must be greater than 0"
-            );
-            total += allocations[i];
-        }
-        require(total <= 100, "Total allocation exceeds 100%");
-        return total;
     }
 
     // Helper function to calculate remaining percentage

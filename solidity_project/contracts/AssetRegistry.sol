@@ -19,15 +19,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * */
 
 contract AssetRegistry {
-    /// @notice Reference to the deployed ERC721 contract (AssetToken).
     AssetToken public assetToken;
     uint256 private _nextAssetId = 1;
 
-    /// @dev Stores basic info about each asset.
     struct AssetInfo {
         address assetOwner;
-        string description;   // E.g., "House on 123 Street"
-        bool isExecuted; // Whether it has been distributed // TODOS: change to state
+        string description;   
+        bool isExecuted; // Whether it has been distributed 
         bool isLocked; // Whether the person died
         bool exists;
         uint256 value;
@@ -39,27 +37,13 @@ contract AssetRegistry {
     /// @dev A mapping of assetId -> Beneficiaries and their respective allocations
     mapping(uint256 => AssetInfo) public assets;
     mapping(uint256 => mapping(address => uint256)) beneficiaryAllocPercentages;
-    // Ensure that there are no duplicate assets
-    mapping(bytes32 => bool) public assetKeyExists;
+    mapping(bytes32 => bool) public assetKeyExists; // Ensure that there are no duplicate assets
 
-   /**
-     * @notice Initialize this registry with the address of an already deployed AssetToken.
-     * @param _assetTokenAddress Address of the AssetToken contract.
-     *
-     * Even though we don't mint at creation time, we still need to know where
-     * to mint later once the owner calls distributeAsset() upon death/execution.
-     */
     constructor(address _assetTokenAddress) {
         require(_assetTokenAddress != address(0), "Invalid AssetToken address");
         assetToken = AssetToken(_assetTokenAddress);
     }
 
-    /**
-     * @notice Create a new asset in the registry, specifying its unique ID and description.
-     *
-     * Requirements:
-     * - Only the contract owner can create an asset in this simplified design.
-     */
     function createAsset(address assetOwner, string memory description, uint256 value, string memory certificationUrl, address[] memory beneficiaries, uint256[] memory allocations) external returns (uint256){
         bytes32 assetKey = keccak256(abi.encodePacked(description, value, certificationUrl));
         require(!assetKeyExists[assetKey], "Asset already exists");
@@ -101,9 +85,10 @@ contract AssetRegistry {
         return assets[assetId];
     }
 
-    /*
-     We are simplifying the update for tokenized assets since the fractional ownership tends to be larger
-     compared to monetary digital assets so its shorter and we can just pass in the whole new beneficiary/allocation
+    /* 
+    Update Beneficiaries and Allocations of physical
+    - simplifying the update for tokenized assets since there's likely fewer fractional ownership tends to be
+    for physical assets, we will pass in the whole new beneficiary/allocation and not mandate residuary beneficiary
     */
 
     function updateBeneficiariesAndAllocations(
@@ -137,6 +122,7 @@ contract AssetRegistry {
         }
     }
 
+    // Distribute physical assets are called by Will.sol's triggerDistribution()
     function distributeAsset(uint256 assetId) external {
         require(assets[assetId].exists, "Asset does not exist");
         require(!assets[assetId].isExecuted, "Already executed");
@@ -155,18 +141,7 @@ contract AssetRegistry {
         asset.isExecuted = true;
     }
 
-    /**
-     * @notice Mint a fractional share of a particular asset by calling `AssetToken.mintShare`.
-     * @param to The address receiving the newly minted share token.
-     * @param assetId A unique identifier for the physical asset.
-     * @param sharePercentage The fraction of the asset, e.g., 25 for 25%.
-     *
-     * Requirements:
-     * - `assetId` must exist in this registry.
-     * - `sharePercentage` must be > 0.
-     * - The sum of already minted shares + `sharePercentage` must not exceed 100.
-     * - Only the contract owner can call this, in this simplified approach.
-     */
+    // Mint a fractional share of a particular asset 
     function mintShare(
         address to,
         uint256 assetId,
@@ -176,24 +151,15 @@ contract AssetRegistry {
         require(sharePercentage > 0, "Share must be > 0");
         require(sharePercentage < 100, "Share must be < 100");
 
-        // Mint the token in the AssetToken contract
-        // (which also sets tokenToAssetId[tokenId] and tokenSharePercentage[tokenId])
         assetToken.mintShare(to, assetId, sharePercentage);
     }
 
-    /**
-     * @notice Returns the description and total minted share percentage of an asset.
-     * @param assetId The asset identifier to query.
-     * @return description The text describing the asset
-     */
     function getAssetInfo(uint256 assetId) external view returns (string memory description) {
         AssetInfo storage asset = assets[assetId];
         require(asset.exists, "Asset does not exist");
         return (asset.description);
     }
 
-    // when setting allocation, take in arr of address for beneficiary
-    // and its allocation
     function getBeneficiaryAllocation(uint256 assetId, address beneficiary) external view returns (uint256) {
         return beneficiaryAllocPercentages[assetId][beneficiary];
     }
