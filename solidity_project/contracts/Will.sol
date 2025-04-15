@@ -140,70 +140,6 @@ contract Will {
     --------------------------
     */
 
-    function emitTestEvent() public {
-        emit Test("Hello, Test event!");
-    }
-
-    // function to update will state based on death nrics
-    function updateWillStateToDeathConfirmed(
-        string memory deathRegistryNrics
-    ) public {
-        console.log(deathRegistryNrics);
-        string[] memory nrics = WillFormat.splitString(deathRegistryNrics, ",");
-        // Loop through all NRICs
-        for (uint256 i = 0; i < nrics.length; i++) {
-            string memory currentNric = nrics[i];
-            for (uint256 j = 0; j < allWillOwners.length; j++) {
-                address owner = allWillOwners[j];
-                WillLib.WillData storage willData = wills[owner];
-                if (
-                    keccak256(bytes(willData.nric)) ==
-                    keccak256(bytes(currentNric)) &&
-                    (willData.state == WillLib.WillState.InCreation)
-                ) {
-                    willData.state = WillLib.WillState.DeathConfirmed;
-                }
-            }
-        }
-        emit DeathUpdated(deathRegistryNrics);
-    }
-
-    // function to update will state based on death nrics
-    function updateWillStateToGrantOfProbateConfirmed(
-        string memory grantOfProbateNrics
-    ) public {
-        string[] memory nrics = WillFormat.splitString(
-            grantOfProbateNrics,
-            ","
-        );
-        // Loop through all NRICs
-        for (uint256 i = 0; i < nrics.length; i++) {
-            string memory currentNric = nrics[i];
-            for (uint256 j = 0; j < allWillOwners.length; j++) {
-                address owner = allWillOwners[j];
-                WillLib.WillData storage willData = wills[owner];
-                if (
-                    keccak256(bytes(willData.nric)) ==
-                    keccak256(bytes(currentNric)) &&
-                    (willData.state == WillLib.WillState.DeathConfirmed)
-                ) {
-                    willData.state = WillLib.WillState.GrantOfProbateConfirmed;
-                }
-            }
-        }
-        emit ProbateUpdated(grantOfProbateNrics);
-    }
-
-    function receiveProcessedData(string memory _newValue) public {
-        console.log(_newValue);
-        storedValue = _newValue; // Store processed data
-        emit DataReceived(storedValue);
-    }
-
-    function getStoredValue() public view returns (string memory) {
-        return storedValue;
-    }
-
     function createWill(address owner, string memory nric) public {
         require(msg.sender != address(0), "Invalid sender address");
         require(wills[owner].owner == address(0), "Will already exists");
@@ -227,96 +163,6 @@ contract Will {
         emit WillCreated(owner);
     }
 
-    // Helper function for updating one beneficiary's allocation percentage.
-    function updateOneAllocationPercentage(
-        address owner,
-        address beneficiary,
-        uint256 allocationPercentage
-    ) public onlyAuthorizedEditors(owner) {
-        require(
-            allocationPercentage > 0,
-            "Allocation percentage must be greater than 0"
-        ); // Cannot update someone's allocation to 0
-        require(wills[owner].owner != address(0), "Will does not exist");
-
-        beneficiaryAllocPercentages[owner][beneficiary] = allocationPercentage;
-        emit AllocationPercentageUpdated(
-            owner,
-            beneficiary,
-            allocationPercentage
-        );
-    }
-
-    // Update multiple beneficiaries' allocation percentages
-    function updateAllocations(
-        address owner,
-        address[] memory beneficiariesToUpdate,
-        uint256[] memory newPercentages
-    ) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) {
-        require(
-            beneficiariesToUpdate.length == newPercentages.length,
-            "Mismatched input arrays"
-        );
-
-        uint256 oldTotal = 0;
-        address[] memory allBeneficiaries = wills[owner].beneficiaries;
-        address residualBeneficiary = wills[owner].residualBeneficiary;
-
-        // Calculate the current sum of allocation percentages
-        for (uint256 i = 0; i < allBeneficiaries.length; i++) {
-            oldTotal += beneficiaryAllocPercentages[owner][allBeneficiaries[i]];
-        }
-
-        // Calculate the expected sum of allocation percentages after updating
-        uint256 newTotal = oldTotal;
-        for (uint256 i = 0; i < beneficiariesToUpdate.length; i++) {
-            address beneficiary = beneficiariesToUpdate[i];
-            newTotal =
-                newTotal -
-                beneficiaryAllocPercentages[owner][beneficiary] +
-                newPercentages[i]; // Replace all the allocation percentages that need to be updated
-        }
-
-        require(newTotal <= 100, "Total allocation exceeds 100%");
-
-        for (uint256 i = 0; i < beneficiariesToUpdate.length; i++) {
-            beneficiaryAllocPercentages[owner][
-                beneficiariesToUpdate[i]
-            ] = newPercentages[i];
-            emit AllocationPercentageUpdated(
-                owner,
-                beneficiariesToUpdate[i],
-                newPercentages[i]
-            );
-        }
-
-        // Assign leftover percentage to residual beneficiary
-        uint256 remainingPercentage = WillLib.calculateRemainingPercentage(
-            newTotal
-        );
-        if (remainingPercentage > 0) {
-            if (beneficiaryAllocPercentages[owner][residualBeneficiary] == 0) {
-                wills[owner].beneficiaries.push(residualBeneficiary); // Add residual beneficiary if not present
-                beneficiaryAllocPercentages[owner][
-                    residualBeneficiary
-                ] = remainingPercentage;
-                emit AllocationPercentageUpdated(
-                    owner,
-                    residualBeneficiary,
-                    remainingPercentage
-                );
-            } else {
-                beneficiaryAllocPercentages[owner][
-                    residualBeneficiary
-                ] += remainingPercentage;
-                emit BeneficiaryAdded(
-                    owner,
-                    residualBeneficiary,
-                    remainingPercentage
-                );
-            }
-        }
-    }
 
     function addBeneficiaries(
         address owner,
@@ -462,6 +308,97 @@ contract Will {
         }
     }
 
+    // Helper function for updating one beneficiary's allocation percentage.
+    function updateOneAllocationPercentage(
+        address owner,
+        address beneficiary,
+        uint256 allocationPercentage
+    ) public onlyAuthorizedEditors(owner) {
+        require(
+            allocationPercentage > 0,
+            "Allocation percentage must be greater than 0"
+        ); // Cannot update someone's allocation to 0
+        require(wills[owner].owner != address(0), "Will does not exist");
+
+        beneficiaryAllocPercentages[owner][beneficiary] = allocationPercentage;
+        emit AllocationPercentageUpdated(
+            owner,
+            beneficiary,
+            allocationPercentage
+        );
+    }
+
+    // Update multiple beneficiaries' allocation percentages
+    function updateAllocations(
+        address owner,
+        address[] memory beneficiariesToUpdate,
+        uint256[] memory newPercentages
+    ) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) {
+        require(
+            beneficiariesToUpdate.length == newPercentages.length,
+            "Mismatched input arrays"
+        );
+
+        uint256 oldTotal = 0;
+        address[] memory allBeneficiaries = wills[owner].beneficiaries;
+        address residualBeneficiary = wills[owner].residualBeneficiary;
+
+        // Calculate the current sum of allocation percentages
+        for (uint256 i = 0; i < allBeneficiaries.length; i++) {
+            oldTotal += beneficiaryAllocPercentages[owner][allBeneficiaries[i]];
+        }
+
+        // Calculate the expected sum of allocation percentages after updating
+        uint256 newTotal = oldTotal;
+        for (uint256 i = 0; i < beneficiariesToUpdate.length; i++) {
+            address beneficiary = beneficiariesToUpdate[i];
+            newTotal =
+                newTotal -
+                beneficiaryAllocPercentages[owner][beneficiary] +
+                newPercentages[i]; // Replace all the allocation percentages that need to be updated
+        }
+
+        require(newTotal <= 100, "Total allocation exceeds 100%");
+
+        for (uint256 i = 0; i < beneficiariesToUpdate.length; i++) {
+            beneficiaryAllocPercentages[owner][
+                beneficiariesToUpdate[i]
+            ] = newPercentages[i];
+            emit AllocationPercentageUpdated(
+                owner,
+                beneficiariesToUpdate[i],
+                newPercentages[i]
+            );
+        }
+
+        // Assign leftover percentage to residual beneficiary
+        uint256 remainingPercentage = WillLib.calculateRemainingPercentage(
+            newTotal
+        );
+        if (remainingPercentage > 0) {
+            if (beneficiaryAllocPercentages[owner][residualBeneficiary] == 0) {
+                wills[owner].beneficiaries.push(residualBeneficiary); // Add residual beneficiary if not present
+                beneficiaryAllocPercentages[owner][
+                    residualBeneficiary
+                ] = remainingPercentage;
+                emit AllocationPercentageUpdated(
+                    owner,
+                    residualBeneficiary,
+                    remainingPercentage
+                );
+            } else {
+                beneficiaryAllocPercentages[owner][
+                    residualBeneficiary
+                ] += remainingPercentage;
+                emit BeneficiaryAdded(
+                    owner,
+                    residualBeneficiary,
+                    remainingPercentage
+                );
+            }
+        }
+    }
+
     // Function to add digital assets to the will
     function fundWill(address owner) external payable onlyWillOwner(owner) {
         require(msg.value > 0, "Must send ETH");
@@ -551,6 +488,69 @@ contract Will {
                 beneficiaryAllocPercentages
             );
     }
+
+    /* 
+    --------------------------------------
+        INTERACTIONS WITH EXTERNAL EVENTS
+    --------------------------------------
+    */
+
+    // function to update will state based on death nrics
+    function updateWillStateToDeathConfirmed(
+        string memory deathRegistryNrics
+    ) public {
+        console.log(deathRegistryNrics);
+        string[] memory nrics = WillFormat.splitString(deathRegistryNrics, ",");
+        // Loop through all NRICs
+        for (uint256 i = 0; i < nrics.length; i++) {
+            string memory currentNric = nrics[i];
+            for (uint256 j = 0; j < allWillOwners.length; j++) {
+                address owner = allWillOwners[j];
+                WillLib.WillData storage willData = wills[owner];
+                if (
+                    keccak256(bytes(willData.nric)) ==
+                    keccak256(bytes(currentNric)) &&
+                    (willData.state == WillLib.WillState.InCreation)
+                ) {
+                    willData.state = WillLib.WillState.DeathConfirmed;
+                }
+            }
+        }
+        emit DeathUpdated(deathRegistryNrics);
+    }
+
+    // function to update will state based on death nrics
+    function updateWillStateToGrantOfProbateConfirmed(
+        string memory grantOfProbateNrics
+    ) public {
+        string[] memory nrics = WillFormat.splitString(
+            grantOfProbateNrics,
+            ","
+        );
+        // Loop through all NRICs
+        for (uint256 i = 0; i < nrics.length; i++) {
+            string memory currentNric = nrics[i];
+            for (uint256 j = 0; j < allWillOwners.length; j++) {
+                address owner = allWillOwners[j];
+                WillLib.WillData storage willData = wills[owner];
+                if (
+                    keccak256(bytes(willData.nric)) ==
+                    keccak256(bytes(currentNric)) &&
+                    (willData.state == WillLib.WillState.DeathConfirmed)
+                ) {
+                    willData.state = WillLib.WillState.GrantOfProbateConfirmed;
+                }
+            }
+        }
+        emit ProbateUpdated(grantOfProbateNrics);
+    }
+
+
+    /* 
+    ------------------------
+        ADDING PERMISSIONS
+    ------------------------
+    */
 
     function addEditor(
         address owner,
@@ -654,9 +654,12 @@ contract Will {
         wills[owner].residualBeneficiary = beneficiary;
     }
 
-    /***************************
-     * ASSET REGISTRY
-     ****************************/
+    /* 
+    ------------------------
+        ASSET REGISTRY
+    ------------------------
+    */
+
     function createAsset(
         address owner,
         string memory description,
@@ -723,5 +726,19 @@ contract Will {
 
     function callTriggerDistributionForTesting(address assetOwner, uint256 assetId) public {
         triggerDistribution(assetOwner, assetId);
+    }
+
+    function emitTestEvent() public {
+        emit Test("Hello, Test event!");
+    }
+
+    function receiveProcessedData(string memory _newValue) public {
+        console.log(_newValue);
+        storedValue = _newValue; // Store processed data
+        emit DataReceived(storedValue);
+    }
+
+    function getStoredValue() public view returns (string memory) {
+        return storedValue;
     }
 }
