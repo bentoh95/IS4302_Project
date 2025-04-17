@@ -1065,7 +1065,7 @@ Value: ${assetValue}
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
-  it.only("Should distribute Crypto and Physical Assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
+  it("Should distribute Crypto and Physical Assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
     this.timeout(120000);
     console.log("=== Starting distributeAssets test ===");
 
@@ -1161,6 +1161,7 @@ Value: ${assetValue}
       );
       eventListener.on("DeathUpdated", (event) => {
         console.log("📡 DeathUpdated event received");
+        eventListener.stop();
         resolve(event);
       });
       eventListener.listen();
@@ -1196,6 +1197,7 @@ Value: ${assetValue}
       );
       eventListener.on("ProbateUpdated", (event) => {
         console.log("📡 GrantOfProbateUpdated event received");
+        eventListener.stop();
         resolve(event);
       });
       eventListener.listen();
@@ -1270,12 +1272,12 @@ Value: ${assetValue}
       expect(pctSum).to.equal(100);
     }
 
-    // 11. Check that the will is now closed
+    // 13. Check that the will is now closed
     const finalState = await contract.methods.getWillState(owner).call();
     console.log("✅ Final will state after full distribution:", finalState);
     expect(finalState).to.equal("Closed");
 
-    // 12. Record balances after distribution
+    // 14. Record balances after distribution
     const balAfter1 = BigInt(await web3.eth.getBalance(beneficiary1));
     const balAfter2 = BigInt(await web3.eth.getBalance(beneficiary2));
     const balAfterResidual = BigInt(await web3.eth.getBalance(residual));
@@ -1288,7 +1290,7 @@ Value: ${assetValue}
       `🔎 Final Crypto balances:\n  ${beneficiary1}: ${balAfter1} (+${received1})\n  ${beneficiary2}: ${balAfter2} (+${received2})\n  ${residual}: ${balAfterResidual} (+${receivedResidual})`
     );
 
-    // 13. Check correctness with tolerance
+    // 15. Check correctness with tolerance
     const payout = BigInt(web3.utils.toWei("0.4", "ether"));
     const residualPayout = BigInt(web3.utils.toWei("0.2", "ether"));
     const delta = BigInt(web3.utils.toWei("0.0002", "ether"));
