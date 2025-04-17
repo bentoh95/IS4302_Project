@@ -38,6 +38,7 @@ contract AssetRegistry {
     mapping(uint256 => AssetInfo) public assets;
     mapping(uint256 => mapping(address => uint256)) beneficiaryAllocPercentages;
     mapping(bytes32 => bool) public assetKeyExists; // Ensure that there are no duplicate assets
+    mapping(uint256 => uint256[]) private _assetTokenIds; // keeps track of tokenIds minted per asset
 
     constructor(address _assetTokenAddress) {
         require(_assetTokenAddress != address(0), "Invalid AssetToken address");
@@ -134,7 +135,8 @@ contract AssetRegistry {
             address ben = bens[i];
             uint256 pct = beneficiaryAllocPercentages[assetId][ben];
             if (pct > 0) {
-                assetToken.mintShare(ben, assetId, pct);
+                uint256 tokenId = assetToken.mintShare(ben, assetId, pct);
+                _assetTokenIds[assetId].push(tokenId); 
             }
         }
 
@@ -154,6 +156,33 @@ contract AssetRegistry {
         assetToken.mintShare(to, assetId, sharePercentage);
     }
 
+    function getAssetDistributionProof(
+            uint256 assetId
+        )
+        external
+        view
+        returns (
+            bool isExecuted,               // has distributeAsset() been called?
+            address[] memory beneficiaries,// beneficiaries in stored order
+            uint256[] memory tokenIds,     // tokenIds minted (one‑to‑one)
+            uint256[] memory shares        // % shares for each beneficiary
+        )
+    {
+        AssetInfo storage asset = assets[assetId];
+        require(asset.exists, "Asset does not exist");
+
+        isExecuted    = asset.isExecuted;
+        beneficiaries = asset.beneficiaries;
+        tokenIds      = _assetTokenIds[assetId];
+
+        // build the shares array on‑the‑fly
+        uint256 len = beneficiaries.length;
+        shares = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            shares[i] = beneficiaryAllocPercentages[assetId][beneficiaries[i]];
+        }
+    }
+
     function getAssetInfo(uint256 assetId) external view returns (string memory description) {
         AssetInfo storage asset = assets[assetId];
         require(asset.exists, "Asset does not exist");
@@ -163,6 +192,7 @@ contract AssetRegistry {
     function getBeneficiaryAllocation(uint256 assetId, address beneficiary) external view returns (uint256) {
         return beneficiaryAllocPercentages[assetId][beneficiary];
     }
+
 
 }
 

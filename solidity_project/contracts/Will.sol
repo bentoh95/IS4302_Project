@@ -715,6 +715,43 @@ contract Will {
         );
     }
 
+    function viewAllAssetDistributionProofs(
+            address owner
+        )
+        external
+        view
+        onlyViewPermitted(owner)
+        returns (
+            uint256[] memory assetIds,
+            bool[]    memory executed,
+            address[][] memory beneficiaries,
+            uint256[][] memory tokenIds,
+            uint256[][] memory shares
+        )
+    {
+        uint256 len = wills[owner].assetIds.length;
+        assetIds      = wills[owner].assetIds;
+        executed      = new bool[](len);
+        beneficiaries = new address[][](len);
+        tokenIds      = new uint256[][](len);
+        shares        = new uint256[][](len);
+
+        for (uint256 i = 0; i < len; i++) {
+            uint256 id = assetIds[i];
+
+            (
+                bool isExecuted,
+                address[] memory bens,
+                uint256[] memory tIds,
+                uint256[] memory pct
+            ) = assetRegistry.getAssetDistributionProof(id);
+
+            executed[i]      = isExecuted;
+            beneficiaries[i] = bens;
+            tokenIds[i]      = tIds;
+            shares[i]        = pct;
+        }
+    }
     /**
      * For Testing 
      */
