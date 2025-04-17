@@ -716,11 +716,6 @@ describe("Will", function () {
       const pctList = shares[i].map((p) => Number(p));
       const pctTotal = pctList.reduce((s, x) => s + x, 0);
 
-      console.log(`\nAsset #${id} executed: ${executed[i]}`);
-      console.log("  Beneficiaries:", benList);
-      console.log("  Token IDs:    ", tokenList);
-      console.log("  Shares (%):   ", pctList);
-
       expect(executed[i]).to.be.true;
       expect(pctTotal).to.equal(100);
     }
