@@ -670,7 +670,7 @@ describe("Will", function () {
     expect(finalState).to.equal("InCreation");
   });
 
-  it.only("Should distribute asset, close the will, and print distribution proofs", async function () {
+  it("Should distribute asset, close the will, and print distribution proofs", async function () {
     // create & set up will 
     await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
