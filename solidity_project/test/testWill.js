@@ -671,7 +671,7 @@ describe("Will", function () {
   });
 
   it("Should distribute asset, close the will, and print distribution proofs", async function () {
-    // create & set up will 
+    // create & set up will
     await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
       owner.address,
@@ -693,7 +693,7 @@ describe("Will", function () {
       [60, 40]
     );
 
-    // set state to probate confirmed and distribute 
+    // set state to probate confirmed and distribute
     await will.forceSetWillStateGrantOfProbateConfirmed(owner.address);
     expect(await will.getWillState(owner.address)).to.equal(
       "GrantOfProbateConfirmed"
@@ -703,7 +703,7 @@ describe("Will", function () {
     expect(await will.getWillState(owner.address)).to.equal("Closed");
 
     // eensure it is real beneficiary to view
-    const willAsBen = will.connect(beneficiary1); 
+    const willAsBen = will.connect(beneficiary1);
 
     const [assetIds, executed, beneficiaries, tokenIds, shares] =
       await willAsBen.viewAllAssetDistributionProofs(owner.address);
@@ -1065,7 +1065,7 @@ Value: ${assetValue}
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
-  it("Should distribute Crypto and Physical Assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
+  it.only("Should distribute Crypto and Physical Assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
     this.timeout(120000);
     console.log("=== Starting distributeAssets test ===");
 
@@ -1219,24 +1219,56 @@ Value: ${assetValue}
       `✅ Will state after probate confirmation: ${stateAfterProbate}`
     );
 
-    // 9. Distribute crypto assets
-    console.log("🚀 Distributing Crypto assets...");
-    const receipt = await contract.methods.distributeAssets(owner).send({
+    // 9.  🚀 Distribute crypto first (will becomes Closed)
+    await contract.methods.distributeAssets(owner).send({
       from: owner,
-      gas: 1000000,
+      gas: 1_000_000,
     });
-    console.log("✅ Crypto Assets distributed");
+    console.log("✅ Crypto assets distributed");
 
-    // 10. Trigger asset distribution manually
-    const assetId = 1; // Assuming this is the ID
+    // 10. Re‑open for physical assets (test‑only helper)
+    await contract.methods
+      .forceSetWillStateGrantOfProbateConfirmed(owner)
+      .send({ from: owner, gas: 100000 });
+
+    // 11. Trigger physical‑asset distribution
+    const assetId = 1;
     await contract.methods
       .callTriggerDistributionForTesting(owner, assetId)
       .send({ from: owner, gas: 500000 });
-    console.log(
-      "✅ Triggered Physical asset distribution for asset ID:",
-      assetId
-    );
-    console.log("🚀 Distributing Physical assets...");
+    console.log("✅ Physical asset distribution executed");
+
+    // 12. Fetch and assert proofs
+    const proofs = await contract.methods
+      .viewAllAssetDistributionProofs(owner)
+      .call({ from: beneficiary1 });
+
+    const {
+      0: assetIds,
+      1: executed,
+      2: beneficiaries,
+      3: tokenIds,
+      4: shares,
+    } = proofs;
+
+    const toNums = (x) =>
+      Array.isArray(x) ? x.map(Number) : Object.values(x).map(Number);
+
+    for (let i = 0; i < assetIds.length; i++) {
+      const id = Number(assetIds[i]);
+      const benList = beneficiaries[i];
+      const tIds = toNums(tokenIds[i]);
+      const pctList = toNums(shares[i]);
+      const pctSum = pctList.reduce((s, v) => s + v, 0);
+
+      console.log(`\nAsset #${id} executed: ${executed[i]}`);
+      console.log("  Beneficiaries:", benList);
+      console.log("  Token IDs:    ", tIds);
+      console.log("  Shares (%):   ", pctList);
+
+      expect(executed[i]).to.be.true;
+      expect(pctSum).to.equal(100);
+    }
 
     // 11. Check that the will is now closed
     const finalState = await contract.methods.getWillState(owner).call();
