@@ -959,7 +959,7 @@ Value: ${assetValue}
     expect(allocation2).to.equal(80);
   });
 
-  it("Should revert when authorised editor tries to edit after DeathConfirmed", async function () {
+  it("Should revert when authorised editor tries to edit after death is confirmed", async function () {
     await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(owner.address, residualBeneficiary1.address);
     await will.addEditor(owner.address, editor1.address);
