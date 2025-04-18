@@ -141,19 +141,6 @@ describe("Will", function () {
     expect(willData.state).to.equal(0); // WillState.InCreation
   });
 
-  /* it("Should add a beneficiary successfully", async function () {
-      await will.createWill(owner.address);
-
-      // Add beneficiary with an allocation of 100
-      await will.addBeneficiary(owner.address, beneficiary1.address, 100);
-
-        // Await the result of getBeneficiaryAllocation to get the actual allocation
-        const allocation = await will.getBeneficiaryAllocation(owner.address, beneficiary1.address);
-
-      // Assert that the allocation is 100
-      expect(allocation).to.equal(100);
-  }); */
-
   it("Should allow owner to set residual beneficiary", async function () {
     await will.createWill(owner.address, "S7654321B");
     await will.setResidualBeneficiary(
@@ -262,17 +249,6 @@ describe("Will", function () {
       will.addBeneficiaries(owner.address, beneficiaries, allocations)
     ).to.be.revertedWith("Total allocation exceeds 100%");
   });
-
-  /* it("Should update the allocation for a beneficiary", async function () { 
-      // Create a will for the owner 
-      await will.createWill(owner.address); 
-      // Add a beneficiary with an initial allocation 
-      const initialAllocation = 100; await will.addBeneficiary(owner.address, beneficiary1.address, initialAllocation); 
-      // Update the allocation for the beneficiary 
-      const updatedAllocation = 200; await will.updateAllocation(owner.address, beneficiary1.address, updatedAllocation); 
-      const allocation = await will.getBeneficiaryAllocationPercentage(owner.address, beneficiary1.address);
-      expect(allocation).to.equal(200);
-  }); */
 
   it("Should update the allocation for a beneficiary successfully", async function () {
     // Create a will for the owner
@@ -461,17 +437,6 @@ describe("Will", function () {
     //bene1, bene2, resi1
     //20, 70, 30
   });
-
-  /* it("Should remove beneficiary", async function () { 
-      // Create a will for the owner 
-      await will.createWill(owner.address, "S7654321B"); 
-      // Add a beneficiary with an initial allocation 
-      const initialAllocation = 100; await will.addBeneficiary(owner.address, beneficiary1.address, initialAllocation); 
-      // Remove the beneficiary 
-      await will.removeBeneficiary(owner.address, beneficiary1.address);
-      const allocation = await will.getBeneficiaryAllocationPercentage(owner.address, beneficiary1.address);
-      expect(allocation).to.equal(0); 
-  }); */
 
   it("Should revert if removing residual beneficiary", async function () {
     // Create the will and set the residual beneficiary
@@ -994,6 +959,28 @@ Value: ${assetValue}
     expect(allocation2).to.equal(80);
   });
 
+  it("Should revert when authorised editor tries to edit after DeathConfirmed", async function () {
+    await will.createWill(owner.address, "S7654321B");
+    await will.setResidualBeneficiary(owner.address, residualBeneficiary1.address);
+    await will.addEditor(owner.address, editor1.address);
+  
+    // set state to death
+    await will.updateWillStateToDeathConfirmed("S7654321B");
+  
+    // add new beneficiary by authoirsed editor
+    const newBeneficiaries = [beneficiary1.address, beneficiary2.address];
+    const newAllocations = [30, 70];
+    await expect(
+      will.connect(editor1).addBeneficiaries(owner.address, newBeneficiaries, newAllocations)
+    ).to.be.revertedWith("Will locked: editing not allowed after DeathConfirmed");
+  
+    // update alloc by authorised editor
+    await expect(
+      will.connect(editor1).updateOneAllocationPercentage(owner.address, beneficiary1.address, 25)
+    ).to.be.revertedWith("Will locked: editing not allowed after DeathConfirmed");
+  });
+  
+  
   it("Should add a viewer successfully", async function () {
     await will.createWill(owner.address, "S7654321B");
     await will.addViewer(owner.address, viewer1.address);
@@ -1060,6 +1047,7 @@ Value: ${assetValue}
     ).to.be.revertedWith("Not authorized to view this will (InCreation)");
   });
 
+  
   it("Should distribute Crypto and Physical Assets correctly to beneficiaries after states are updated from calling the government Death Registry and Grant of Probate Registry", async function () {
     this.timeout(120000);
     console.log("=== Starting distributeAssets test ===");

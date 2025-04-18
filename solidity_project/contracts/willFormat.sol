@@ -170,4 +170,41 @@ library WillFormat {
         
         return distributionDetails;
     }
+
+    function collectAssetDistributionProofs(
+        AssetRegistry assetRegistry,
+        uint256[] storage assetIds
+    )
+        internal
+        view
+        returns (
+            uint256[] memory ids,
+            bool[] memory executed,
+            address[][] memory beneficiaries,
+            uint256[][] memory tokenIds,
+            uint256[][] memory shares
+        )
+    {
+        uint256 len = assetIds.length;
+        ids            = assetIds;
+        executed       = new bool[](len);
+        beneficiaries  = new address[][](len);
+        tokenIds       = new uint256[][](len);
+        shares         = new uint256[][](len);
+
+        for (uint256 i = 0; i < len; i++) {
+            uint256 id = ids[i];
+            (
+                bool isExec,
+                address[] memory bens,
+                uint256[] memory tIds,
+                uint256[] memory pct
+            ) = assetRegistry.getAssetDistributionProof(id);
+
+            executed[i]      = isExec;
+            beneficiaries[i] = bens;
+            tokenIds[i]      = tIds;
+            shares[i]        = pct;
+        }
+    }
 }

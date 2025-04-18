@@ -84,11 +84,12 @@ contract Will {
     modifier onlyAuthorizedEditors(address owner) {
         require(
             wills[owner].owner == msg.sender ||
-                authorizedEditors[owner][msg.sender],
+            authorizedEditors[owner][msg.sender],
             "Not authorized"
         );
         _;
     }
+
 
     modifier residualBeneficiaryExists(address owner) {
         require(
@@ -134,6 +135,14 @@ contract Will {
         _;
     }
 
+    modifier editableBeforeDeath(address owner) {
+        require(
+            wills[owner].state == WillLib.WillState.InCreation,
+            "Will locked: editing not allowed after DeathConfirmed"
+        );
+        _;
+    }
+    
     /* 
     --------------------------
         WILL FUNCTIONALITIES
@@ -168,152 +177,70 @@ contract Will {
         address owner,
         address[] memory newBeneficiaries,
         uint256[] memory newPercentages
-    ) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) {
-        require(
-            newBeneficiaries.length == newPercentages.length,
-            "Mismatched input arrays"
+    )
+        public
+        onlyAuthorizedEditors(owner)
+        residualBeneficiaryExists(owner)
+        editableBeforeDeath(owner)
+    {
+        uint256 total = WillLib.rebalanceAdd(
+            wills[owner],
+            beneficiaryAllocPercentages[owner],
+            newBeneficiaries,
+            newPercentages
         );
 
-        uint256 oldTotal = 0;
-        address[] memory allBeneficiaries = wills[owner].beneficiaries;
-        address residualBeneficiary = wills[owner].residualBeneficiary;
-
-        // Calculate the current total allocation
-        for (uint256 i = 0; i < allBeneficiaries.length; i++) {
-            oldTotal += beneficiaryAllocPercentages[owner][allBeneficiaries[i]];
+        // Emit events for the ones we just (re)wrote
+        for (uint256 i = 0; i < newBeneficiaries.length; i++) {
+            emit BeneficiaryAdded(owner, newBeneficiaries[i], newPercentages[i]);
         }
 
-        uint256 newTotal = oldTotal;
-        for (uint256 i = 0; i < newBeneficiaries.length; i++) {
-            require(newPercentages[i] > 0, "Allocation must be greater than 0");
-            if (beneficiaryAllocPercentages[owner][newBeneficiaries[i]] == 0) {
-                wills[owner].beneficiaries.push(newBeneficiaries[i]); // Add them to beneficiaries[] if new
-            }
-            // Add new allocations
-
-            newTotal += newPercentages[i];
-        }
-
-        // Update the allocations in the mapping
-        for (uint256 i = 0; i < newBeneficiaries.length; i++) {
-            beneficiaryAllocPercentages[owner][
-                newBeneficiaries[i]
-            ] = newPercentages[i];
+        // Optionally emit for residual top‑up
+        uint256 residualPct = WillLib.calculateRemainingPercentage(total);
+        if (residualPct > 0) {
             emit BeneficiaryAdded(
                 owner,
-                newBeneficiaries[i],
-                newPercentages[i]
+                wills[owner].residualBeneficiary,
+                residualPct
             );
-        }
-
-        require(newTotal <= 100, "Total allocation exceeds 100%");
-
-        // Calculate the remaining percentage for the residual beneficiary
-        uint256 remainingPercentage = WillLib.calculateRemainingPercentage(
-            newTotal
-        );
-
-        // If the total allocation is less than 100%, assign the remaining percentage to the residual beneficiary
-        if (remainingPercentage > 0) {
-            // Add the residual beneficiary to the list if not already present
-            if (beneficiaryAllocPercentages[owner][residualBeneficiary] == 0) {
-                wills[owner].beneficiaries.push(residualBeneficiary);
-                beneficiaryAllocPercentages[owner][
-                    residualBeneficiary
-                ] = remainingPercentage;
-                emit BeneficiaryAdded(
-                    owner,
-                    residualBeneficiary,
-                    remainingPercentage
-                );
-            } else {
-                beneficiaryAllocPercentages[owner][
-                    residualBeneficiary
-                ] += remainingPercentage;
-                emit BeneficiaryAdded(
-                    owner,
-                    residualBeneficiary,
-                    remainingPercentage
-                );
-            }
         }
     }
 
     function removeBeneficiaries(
         address owner,
-        address[] memory beneficiariesToRemove
-    ) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) {
-        address residualBeneficiary = wills[owner].residualBeneficiary;
-
-        // Check if any of the beneficiaries to be removed is the residual beneficiary
-        for (uint256 i = 0; i < beneficiariesToRemove.length; i++) {
-            address beneficiary = beneficiariesToRemove[i];
-            require(
-                beneficiary != residualBeneficiary,
-                "Cannot remove the residual beneficiary"
-            );
-        }
-
-        for (uint256 i = 0; i < beneficiariesToRemove.length; i++) {
-            address beneficiary = beneficiariesToRemove[i];
-            require(
-                beneficiaryAllocPercentages[owner][beneficiary] != 0,
-                "Beneficiary does not exist"
-            );
-            delete beneficiaryAllocPercentages[owner][beneficiary];
-
-            // Use the library function to remove beneficiary from array
-            WillLib.removeBeneficiaryFromArray(
-                wills[owner].beneficiaries,
-                beneficiary
-            );
-            emit BeneficiaryRemoved(owner, beneficiary);
-        }
-
-        // Recalculate total allocation
-        uint256 newTotal = 0;
-        address[] memory remainingBeneficiaries = wills[owner].beneficiaries;
-        for (uint256 i = 0; i < remainingBeneficiaries.length; i++) {
-            newTotal += beneficiaryAllocPercentages[owner][
-                remainingBeneficiaries[i]
-            ];
-        }
-
-        // Assign leftover allocation to residual beneficiary
-        uint256 remainingPercentage = WillLib.calculateRemainingPercentage(
-            newTotal
+        address[] memory toRemove
+    )
+        public
+        onlyAuthorizedEditors(owner)
+        residualBeneficiaryExists(owner)
+        editableBeforeDeath(owner)
+    {
+        uint256 total = WillLib.rebalanceRemove(
+            wills[owner],
+            beneficiaryAllocPercentages[owner],
+            toRemove
         );
-        if (remainingPercentage > 0) {
-            // Add residual beneficiary to list if not already present
-            if (beneficiaryAllocPercentages[owner][residualBeneficiary] == 0) {
-                wills[owner].beneficiaries.push(residualBeneficiary);
-                beneficiaryAllocPercentages[owner][
-                    residualBeneficiary
-                ] = remainingPercentage;
-                emit BeneficiaryAdded(
-                    owner,
-                    residualBeneficiary,
-                    remainingPercentage
-                );
-            } else {
-                beneficiaryAllocPercentages[owner][
-                    residualBeneficiary
-                ] += remainingPercentage;
-                emit BeneficiaryAdded(
-                    owner,
-                    residualBeneficiary,
-                    remainingPercentage
-                );
-            }
+
+        // events
+        for (uint256 i = 0; i < toRemove.length; i++) {
+            emit BeneficiaryRemoved(owner, toRemove[i]);
+        }
+
+        uint256 residualPct = WillLib.calculateRemainingPercentage(total);
+        if (residualPct > 0) {
+            emit BeneficiaryAdded(
+                owner,
+                wills[owner].residualBeneficiary,
+                residualPct
+            );
         }
     }
-
     // Helper function for updating one beneficiary's allocation percentage.
     function updateOneAllocationPercentage(
         address owner,
         address beneficiary,
         uint256 allocationPercentage
-    ) public onlyAuthorizedEditors(owner) {
+    ) public onlyAuthorizedEditors(owner) editableBeforeDeath(owner) {
         require(
             allocationPercentage > 0,
             "Allocation percentage must be greater than 0"
@@ -333,7 +260,7 @@ contract Will {
         address owner,
         address[] memory beneficiariesToUpdate,
         uint256[] memory newPercentages
-    ) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) {
+    ) public onlyAuthorizedEditors(owner) residualBeneficiaryExists(owner) editableBeforeDeath(owner) {
         require(
             beneficiariesToUpdate.length == newPercentages.length,
             "Mismatched input arrays"
@@ -400,7 +327,7 @@ contract Will {
     }
 
     // Function to add digital assets to the will
-    function fundWill(address owner) external payable onlyWillOwner(owner) {
+    function fundWill(address owner) external payable onlyWillOwner(owner) editableBeforeDeath(owner) {
         require(msg.value > 0, "Must send ETH");
         wills[owner].digitalAssets += msg.value;
         emit WillFunded(owner, msg.value);
@@ -595,8 +522,8 @@ contract Will {
     function checkBeneficiaries(
         address owner,
         address beneficiary
-    ) public view returns (bool check) {
-        return beneficiaryAllocPercentages[owner][beneficiary] > 0;
+    ) external view returns (bool) {
+        return WillLib.isBeneficiary(beneficiaryAllocPercentages[owner], beneficiary);
     }
 
     function getBeneficiaryAllocationPercentage(
@@ -612,18 +539,9 @@ contract Will {
         return wills[owner].digitalAssets;
     }
 
-    function getWillState(address owner) public view returns (string memory) {
+    function getWillState(address owner) external view returns (string memory) {
         require(wills[owner].owner != address(0), "Will does not exist");
-
-        WillLib.WillState state = wills[owner].state;
-
-        if (state == WillLib.WillState.InCreation) return "InCreation";
-        if (state == WillLib.WillState.DeathConfirmed) return "DeathConfirmed";
-        if (state == WillLib.WillState.GrantOfProbateConfirmed)
-            return "GrantOfProbateConfirmed";
-        if (state == WillLib.WillState.Closed) return "Closed";
-
-        return "Unknown";
+        return WillLib.stateToString(wills[owner].state);
     }
 
     function isAuthorisedEditorExist(
@@ -729,28 +647,10 @@ contract Will {
             uint256[][] memory shares
         )
     {
-        uint256 len = wills[owner].assetIds.length;
-        assetIds      = wills[owner].assetIds;
-        executed      = new bool[](len);
-        beneficiaries = new address[][](len);
-        tokenIds      = new uint256[][](len);
-        shares        = new uint256[][](len);
-
-        for (uint256 i = 0; i < len; i++) {
-            uint256 id = assetIds[i];
-
-            (
-                bool isExecuted,
-                address[] memory bens,
-                uint256[] memory tIds,
-                uint256[] memory pct
-            ) = assetRegistry.getAssetDistributionProof(id);
-
-            executed[i]      = isExecuted;
-            beneficiaries[i] = bens;
-            tokenIds[i]      = tIds;
-            shares[i]        = pct;
-        }
+        return WillFormat.collectAssetDistributionProofs(
+            assetRegistry,
+            wills[owner].assetIds
+            );
     }
     /**
      * For Testing 

@@ -1,11 +1,32 @@
 
 ### Steps to set up project
 
-Navigate into blockchain project folder before testing
-``` cd solidity_project ```
+Add .env file into `solidity_project` directory
+```
+RESET_DB=false
+PROVIDER_URL=http://localhost:8545
+PROVIDER_WEBSOCKET_URL=ws://127.0.0.1:8545
+CONTRACT_ADDRESS=0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0
+CONTRACT_ABI_PATH=../artifacts/contracts/Will.sol/Will.json
+EVENT_POOL_INTERVAL=500
+EVENT_BLOCKS_TO_WAIT=0
+EVENT_BLOCKS_TO_READ=0
+```
+
+Add .env file into `backend` directory
+```
+RESET_DB=true
+PROVIDER_URL=http://localhost:8545
+PROVIDER_WEBSOCKET_URL=ws://127.0.0.1:8545
+CONTRACT_ADDRESS=0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0
+CONTRACT_ABI_PATH=../../solidity_project/artifacts/contracts/Will.sol/Will.json
+EVENT_POOL_INTERVAL=500
+EVENT_BLOCKS_TO_WAIT=0
+EVENT_BLOCKS_TO_READ=0
+```
 
 #### To compile contract:
-`` npx hardhat compile ``
+`` cd solidity_project && npx hardhat compile ``
 
 #### To start blockchain network:
 `` npx hardhat node ``
